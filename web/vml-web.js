@@ -1,7 +1,7 @@
 // vml in the browser: loads vml.wasm (the same compiler + VM as the vml binary) and runs source.
 // Minimal WASI: stdout/stderr are captured, there is no filesystem and no environment.
 //   const vml = await VmlWeb.load("vml.wasm");
-//   const r = vml.run(source);   // { stdout, stderr, code, ms }
+//   const r = vml.run(source, { fuel: 50e6, deny: ["std.fs"], gcStress: false });   // { stdout, stderr, code, ms }
 (function (root) {
   "use strict";
   const EBADF = 8, ENOSYS = 52, ESPIPE = 70;
@@ -91,24 +91,34 @@
     };
     return {
       version: cstr(ex.vml_web_version()),
-      // fuel: max loop iterations per run (stops endless loops); 0 = unlimited
-      run(source, fuel = 50000000) {
+      // options: fuel (max loop iterations per run; 0 = unlimited), deny (module names turned off),
+      // gcStress (collect at every safepoint). A number as the second argument is the fuel.
+      run(source, options = {}) {
+        if (typeof options === "number") options = { fuel: options };
+        const fuel = options.fuel ?? 50000000;
         state.stdout = "";
         state.stderr = "";
-        const data = encoder.encode(source);
-        const ptr = ex.vml_web_alloc(data.length);
-        new Uint8Array(state.memory.buffer).set(data, ptr);
-        new Uint8Array(state.memory.buffer)[ptr + data.length] = 0;
+        const put = (text) => {
+          const data = encoder.encode(text);
+          const p = ex.vml_web_alloc(data.length);
+          const mem = new Uint8Array(state.memory.buffer);
+          mem.set(data, p);
+          mem[p + data.length] = 0;
+          return p;
+        };
+        const ptr = put(source);
+        const denyPtr = put((options.deny || []).join(","));
         const t0 = (typeof performance !== "undefined") ? performance.now() : Date.now();
         let code;
         try {
-          code = ex.vml_web_run(ptr, BigInt(fuel));
+          code = ex.vml_web_run(ptr, BigInt(fuel), denyPtr, options.gcStress ? 1 : 0);
         } catch (e) {
           state.stderr += "\n[vml crashed: " + e.message + "]";
           code = 3;
         }
         const ms = ((typeof performance !== "undefined") ? performance.now() : Date.now()) - t0;
         ex.vml_web_free(ptr);
+        ex.vml_web_free(denyPtr);
         return { stdout: state.stdout, stderr: state.stderr, code, ms };
       },
     };

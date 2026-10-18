@@ -1592,7 +1592,6 @@ static void gen_import(Gen *g, AstRef n) {
         }
         if (c->had_error || internal || midx < 0) return;
     } else {
-        if (c_check_module_feature_allowed(c, mod.start, mod.length) == VM_FALSE) return;
         /* The module's own name in code: `as` name when it is first loaded with one, else the last segment */
         Token handle = (has_alias && !has_braces) ? alias : last;
         midx = c_load_module_file(c, pkg.start, pkg.length, mod.start, mod.length, handle.start, handle.length);

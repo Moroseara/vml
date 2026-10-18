@@ -575,6 +575,15 @@ VML_Result vml_mount_package(VML_State *L, const char *name, const char *dir) {
     return VML_OK;
 }
 
+VML_Result vml_deny_module(VML_State *L, const char *name) {
+    if (L == VM_NULL || name == VM_NULL) return VML_ERR_STATE;
+    if (!vm_config_deny_module(&L->cfg, name)) {
+        vml_set_error(L, "vml_deny_module: too many denied modules");
+        return VML_ERR_STATE;
+    }
+    return VML_OK;
+}
+
 VML_Result vml_set_lib_path(VML_State *L, const char *dir) {
     if (L == VM_NULL || dir == VM_NULL) return VML_ERR_STATE;
     vm_config_set_lib_path(&L->cfg, dir);

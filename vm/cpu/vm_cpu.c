@@ -203,10 +203,13 @@ static VMReg execute(VMCPU *cpu, VMChunk *chunk) {
         R[a].i64 = next_val;
         if (__builtin_expect(next_val < R[a + 1].i64, 1)) {
             if (__builtin_expect(chunk->gc_pending, 0)) vm_gc_collect(chunk);   /* safepoint */
+            /* `for` loops spend fuel like `while` loops (a sandbox must stop both) */
+            if (__builtin_expect(max_fuel > 0, 0) && ++cpu->executed_loops > max_fuel) goto L_FUEL_OUT;
             ip += VM_GET_sBx(inst);
         }
         VM_DISPATCH();
     }
+
     L_EQ_I64_JF: { R[VM_GET_A(inst)].i32 = (vm_i32)(R[VM_GET_B(inst)].i64 == R[VM_GET_C(inst)].i64); VM_FUSED_JF(*ip, 1); }
     L_NE_I64_JF: { R[VM_GET_A(inst)].i32 = (vm_i32)(R[VM_GET_B(inst)].i64 != R[VM_GET_C(inst)].i64); VM_FUSED_JF(*ip, 1); }
     L_LT_I64_JF: { R[VM_GET_A(inst)].i32 = (vm_i32)(R[VM_GET_B(inst)].i64 < R[VM_GET_C(inst)].i64); VM_FUSED_JF(*ip, 1); }
@@ -299,15 +302,15 @@ static VMReg execute(VMCPU *cpu, VMChunk *chunk) {
         vm_i16 off = VM_GET_sBx(inst);
         if (__builtin_expect(off < 0 && chunk->gc_pending, 0)) vm_gc_collect(chunk);   /* safepoint */
         if (__builtin_expect(max_fuel > 0 && off < 0, 0)) {
-            if (++cpu->executed_loops > max_fuel) {
-                if (cpu->catch_top_level == VM_FALSE) vm_sys_write_cstr("[VM Sandbox] Execution fuel limit exceeded\n");
-                cpu->has_error = VM_TRUE;
-                return R[0];
-            }
+            if (++cpu->executed_loops > max_fuel) goto L_FUEL_OUT;
         }
         ip += off;
         VM_DISPATCH();
     }
+    L_FUEL_OUT:
+        if (cpu->catch_top_level == VM_FALSE) vm_sys_write_cstr("[VM Sandbox] Execution fuel limit exceeded\n");
+        cpu->has_error = VM_TRUE;
+        return R[0];
     L_JMP_FALSE:    if (R[VM_GET_A(inst)].b == VM_FALSE) ip += VM_GET_sBx(inst); VM_DISPATCH();
     L_JMP_TRUE:     if (R[VM_GET_A(inst)].b == VM_TRUE)  ip += VM_GET_sBx(inst); VM_DISPATCH();
     L_JMP_NZ_I32:   if (R[VM_GET_A(inst)].i32 == 0)      ip += VM_GET_sBx(inst); VM_DISPATCH();
@@ -318,10 +321,13 @@ static VMReg execute(VMCPU *cpu, VMChunk *chunk) {
         R[a].i32 = next_val;
         if (__builtin_expect(next_val < R[a + 1].i32, 1)) {
             if (__builtin_expect(chunk->gc_pending, 0)) vm_gc_collect(chunk);   /* safepoint */
+            /* `for` loops spend fuel like `while` loops (a sandbox must stop both) */
+            if (__builtin_expect(max_fuel > 0, 0) && ++cpu->executed_loops > max_fuel) goto L_FUEL_OUT;
             ip += VM_GET_sBx(inst);
         }
         VM_DISPATCH();
     }
+
 
     L_CALL_REG: {
         vm_i32 fv = R[VM_GET_B(inst)].i32;

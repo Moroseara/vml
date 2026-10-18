@@ -154,6 +154,9 @@ VML_Result  vml_module_source(VML_State *L, const char *name, const char *source
 /* ---- Where `import` finds .vml packages (call before loading) ---- */
 VML_Result  vml_mount_package(VML_State *L, const char *name, const char *dir);   /* `import name.x` -> dir/x.vml */
 VML_Result  vml_set_lib_path(VML_State *L, const char *dir);                       /* fallback search folder */
+/* Turn a module off for this state's scripts: "std.fs", or a prefix "game.debug.*". Importing it is a
+   compile error that names the module. (allow_io = 0 in VML_Options turns off std.io the same way.) */
+VML_Result  vml_deny_module(VML_State *L, const char *name);
 
 /* ---- Loading & running (one program per state) ---- */
 VML_Result  vml_load_source(VML_State *L, const char *chunk_name, const char *source);

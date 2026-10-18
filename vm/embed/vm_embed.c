@@ -7,6 +7,7 @@ void vm_config_init_default(VMConfig *cfg) {
     cfg->max_instructions = 0;
     cfg->lib_path[0] = '\0';
     cfg->num_pkg_mounts = 0;
+    cfg->num_denied = 0;
 }
 
 void vm_config_init_embedded(VMConfig *cfg, vm_u32 features, vm_u64 max_instructions) {
@@ -14,6 +15,7 @@ void vm_config_init_embedded(VMConfig *cfg, vm_u32 features, vm_u64 max_instruct
     cfg->max_instructions = max_instructions;
     cfg->lib_path[0] = '\0';
     cfg->num_pkg_mounts = 0;
+    cfg->num_denied = 0;
 }
 
 void vm_config_set_lib_path(VMConfig *cfg, const char *path) {
@@ -130,4 +132,32 @@ VMReg vm_embed_call_func(VMCPU *cpu, VMChunk *chunk, vm_i32 func_id,
     VMReg res = vm_cpu_execute(cpu, chunk);
     chunk->entry_func_id = saved_entry;
     return res;
+}
+
+vm_bool vm_config_deny_module(VMConfig *cfg, const char *name) {
+    if (cfg->num_denied >= VM_MAX_DENIED) return VM_FALSE;
+    vm_str_copy(cfg->denied[cfg->num_denied++], name, vm_str_len(name), 64);
+    return VM_TRUE;
+}
+
+vm_bool vm_config_module_denied(const VMConfig *cfg, const char *full, vm_u32 len) {
+    if (cfg == VM_NULL) return VM_FALSE;
+    static const struct { const char *name; vm_u32 flag; } FEATURES[] = {
+        {"std.io", VM_FEAT_STD_IO}, {"std.coroutine", VM_FEAT_COROUTINE}, {"std.random", VM_FEAT_STD_RANDOM},
+        {"std.env", VM_FEAT_STD_ENV}, {"std.fs", VM_FEAT_STD_FS}, {"std.math", VM_FEAT_STD_MATH},
+    };
+    for (vm_u32 i = 0; i < sizeof(FEATURES) / sizeof(FEATURES[0]); i++) {
+        if (vm_str_eq_cstr(full, len, FEATURES[i].name) == VM_TRUE && (cfg->features & FEATURES[i].flag) == 0) return VM_TRUE;
+    }
+    for (vm_u32 i = 0; i < cfg->num_denied; i++) {
+        const char *d = cfg->denied[i];
+        vm_u32 dl = vm_str_len(d);
+        if (vm_str_eq(full, len, d, dl) == VM_TRUE) return VM_TRUE;
+        /* "pkg.*" covers pkg itself and everything under it */
+        if (dl >= 2 && d[dl - 1] == '*' && d[dl - 2] == '.') {
+            vm_u32 pl = dl - 2;
+            if (len >= pl && vm_str_eq(full, pl, d, pl) == VM_TRUE && (len == pl || full[pl] == '.')) return VM_TRUE;
+        }
+    }
+    return VM_FALSE;
 }

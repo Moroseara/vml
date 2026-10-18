@@ -423,6 +423,10 @@ let text = fs.read("a.txt")?
 - ⬜ ตัด `getenv` / `setenv` แบบ Roblox ออก
 - ⬜ sandbox ทำที่ฝั่ง host: host เลือกว่าจะ register module ไหนให้สคริปต์ (`fs`, `net`, `env` ...) — ไม่ register = สคริปต์ import ไม่ได้
 - ⬜ (ทางเลือก) capability แบบ `func main(sys: System)` — **ผมแนะนำให้ตัด** เพราะข้อบนให้ผลเดียวกันแต่ง่ายกว่า
+- ✅ host ปิด module ไหนก็ได้ตามชื่อเต็ม: `vml_deny_module(L, "std.fs")`, prefix `"game.debug.*"`; CLI `--deny std.fs`; import แล้วได้ compile error ที่บอกชื่อ module (รวม module ที่ std import เอง เช่น ปิด `std.math` แล้ว `std.fmt` ใช้ไม่ได้); prelude (string/array/map) ปิดไม่ได้
+  - เดิมเช็กแค่ท่อนสุดท้ายของชื่อ (`import my.fs` จะโดนปิดไปด้วย) — ตอนนี้เช็กชื่อเต็ม
+- ✅ fuel นับทั้ง `while` และ `for` (เดิม `for i in N` หลุด fuel ได้ = รูใน sandbox) — แลกกับช้าลง ~5% เฉพาะลูปที่นับอย่างเดียว; ⬜ คิด fuel ของ `for` ครั้งเดียวตอนเริ่มลูป (ต้องมี opcode ตอนเริ่มลูป)
+- ✅ playground มีแผง Sandbox: ติ๊กปิด module, เลือก fuel, GC stress
 
 ## 9. Standard Library
 

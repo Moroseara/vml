@@ -164,6 +164,20 @@ printf 'import std.os\nfunc main() {\n    print(os.args():join("+"))\n    os.exi
 out=$("$VM" run -- a b 2>&1); code=$?;            check args_project "$out" "a+b"
 [ $code -eq 5 ] || { echo "FAIL project/exit_code_project (got $code)"; fail=1; }
 
+# The host turns modules off by name (SPEC 8)
+mkdir -p "$W/deny" && cd "$W/deny"
+printf 'import std.fs\nfunc main() { print("fs ok") }\n' > usefs.vml
+printf 'import std.fmt\nfunc main() { print(fmt.hex(255)) }\n' > usefmt.vml
+printf 'func main() { print("prelude":upper()) }\n' > prelude.vml
+out=$("$VM" usefs.vml --deny std.fs 2>&1);       check deny_exact "$out" "Module 'std.fs' is turned off by the host program"
+out=$("$VM" usefs.vml --deny 'std.*' 2>&1);      check deny_prefix "$out" "Module 'std.fs' is turned off"
+out=$("$VM" usefs.vml --deny std.json 2>&1);     check deny_other_ok "$out" "fs ok"
+out=$("$VM" usefmt.vml --deny std.math 2>&1);    check deny_through_std "$out" "Module 'std.math' is turned off"
+out=$("$VM" prelude.vml --deny 'std.*' 2>&1);    check deny_keeps_prelude "$out" "PRELUDE"
+mkdir -p fs && printf 'module fs\npub func n(): int { return 1 }\n' > fs/mod.vml
+printf 'import "./fs/mod"\nfunc main() { print(fs.n()) }\n' > localfs.vml
+out=$("$VM" localfs.vml --deny std.fs 2>&1);     check deny_by_full_name "$out" "1"
+
 # Built programs: `vml build` makes something you run directly; *.vmb only when asked
 mkdir -p "$W/exe" && cd "$W/exe"
 printf 'import std.os\nimport std.io\nfunc main() {\n    io.eprint("to stderr")\n    print("args=" + os.args():join(","))\n    os.exit(4)\n}\n' > tool.vml

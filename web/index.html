@@ -134,6 +134,29 @@ code, pre, kbd { font-family: var(--font-mono); font-size: 0.92em; }
 .status .bad { color: var(--err); }
 .note { color: var(--muted); font-size: 0.88rem; margin: 0; }
 
+/* sandbox: what the host lets this script use */
+.sandbox {
+  margin-top: 10px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); padding: 14px 16px; display: grid; gap: 12px;
+}
+.sandbox-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sandbox-head h2 { font: 600 1rem/1.2 var(--font-body); margin: 0; }
+.sandbox-head p { margin: 0; color: var(--muted); font-size: 0.88rem; max-width: 60ch; }
+.mods { display: flex; flex-wrap: wrap; gap: 6px; }
+.mod { position: relative; }
+.mod input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.mod span {
+  display: inline-block; font: 500 0.82rem/1 var(--font-mono); padding: 7px 10px;
+  border-radius: 6px; border: 1px solid var(--line); color: var(--ink); background: var(--bg);
+}
+.mod input:checked + span { border-color: var(--accent); color: var(--accent); }
+.mod input:not(:checked) + span { text-decoration: line-through; color: var(--muted); }
+.mod input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.knobs { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; font-size: 0.9rem; }
+.knobs label { display: inline-flex; align-items: center; gap: 8px; }
+.knobs select { font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.linkish { font: inherit; font-size: 0.85rem; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
 /* ---- reading sections ---- */
 section.read { padding-block: 44px; border-top: 1px solid var(--line); }
 .read h2 {
@@ -220,8 +243,26 @@ footer .wrap { padding-block: 24px 36px; display: flex; gap: 16px; justify-conte
         <pre class="out" id="out" aria-live="polite"><span class="hint">Output appears here.</span></pre>
       </div>
     </div>
-    <p class="note">Runs locally in this page: no files, no network, and loops stop after 50 million iterations.
-      Your edits are kept in this browser.</p>
+    <div class="sandbox" id="sandbox">
+      <div class="sandbox-head">
+        <h2>Sandbox</h2>
+        <p>This page is the host program. It chooses what scripts may use, the same way a game or app that embeds
+          vml would. Changes apply to the next run.</p>
+      </div>
+      <div class="mods" id="mods" role="group" aria-label="Modules scripts may import"></div>
+      <div class="knobs">
+        <label for="fuel">Fuel
+          <select id="fuel">
+            <option value="1000000">1 million loops</option>
+            <option value="50000000" selected>50 million loops</option>
+            <option value="0">unlimited</option>
+          </select>
+        </label>
+        <label for="gcstress"><input type="checkbox" id="gcstress"> GC stress (collect at every safepoint)</label>
+        <button type="button" class="linkish" id="allmods">Allow every module</button>
+      </div>
+    </div>
+    <p class="note">Runs locally in this page: no files and no network. Your edits are kept in this browser.</p>
   </div>
 
   <section class="read" id="tour">
@@ -308,10 +349,12 @@ vml build
         <li><span class="pill done">works</span><span>Projects, workspaces, path dependencies, build cache</span></li>
         <li><span class="pill done">works</span><span>Single-file programs, program arguments, exit codes, stderr</span></li>
         <li><span class="pill done">works</span><span>Standard library: strings, arrays, maps, math, JSON, bytes, files</span></li>
+        <li><span class="pill done">works</span><span>Host sandbox: turn any module off by name, fuel limits</span></li>
         <li><span class="pill next">next</span><span>Larger program limits and per-module struct names</span></li>
         <li><span class="pill next">next</span><span>Linux builds, installers and CI</span></li>
         <li><span class="pill next">next</span><span>Coroutines and tasks that can yield</span></li>
         <li><span class="pill next">next</span><span>Editor support (language server), formatter, docs</span></li>
+        <li><span class="pill next">next</span><span>Calling C libraries directly (FFI), macros</span></li>
       </ul>
     </div>
   </section>
@@ -408,13 +451,46 @@ vml build
     tag.textContent = label[1];
     status.append(tag, document.createTextNode(" · " + r.ms.toFixed(1) + " ms"));
   }
+  // Sandbox: std modules the host may turn off (the prelude — string, array, map — is always there)
+  const MODULES = ["io", "os", "fs", "env", "time", "random", "math", "fmt", "json", "bytes", "bit", "task", "coroutine", "debug"];
+  const mods = document.getElementById("mods");
+  const fuelSel = document.getElementById("fuel");
+  const gcBox = document.getElementById("gcstress");
+  let denied = new Set((store.get("deny") || "").split(",").filter(Boolean));
+  for (const m of MODULES) {
+    const label = document.createElement("label");
+    label.className = "mod";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.id = "mod-" + m;
+    box.checked = !denied.has("std." + m);
+    box.setAttribute("aria-label", "allow std." + m);
+    const tag = document.createElement("span");
+    tag.textContent = "std." + m;
+    box.addEventListener("change", () => {
+      if (box.checked) denied.delete("std." + m); else denied.add("std." + m);
+      store.set("deny", [...denied].join(","));
+    });
+    label.append(box, tag);
+    mods.append(label);
+  }
+  fuelSel.value = store.get("fuel") || fuelSel.value;
+  gcBox.checked = store.get("gc") === "1";
+  fuelSel.addEventListener("change", () => store.set("fuel", fuelSel.value));
+  gcBox.addEventListener("change", () => store.set("gc", gcBox.checked ? "1" : "0"));
+  document.getElementById("allmods").addEventListener("click", () => {
+    denied.clear();
+    store.set("deny", "");
+    for (const b of mods.querySelectorAll("input")) b.checked = true;
+  });
+
   function runNow() {
     if (!vml) return;
     runBtn.disabled = true;
     status.textContent = "running…";
     // let the browser paint "running…" before a long program blocks the thread
     setTimeout(() => {
-      try { show(vml.run(code.value)); }
+      try { show(vml.run(code.value, { fuel: Number(fuelSel.value), deny: [...denied], gcStress: gcBox.checked })); }
       finally { runBtn.disabled = false; }
     }, 16);
   }

@@ -54,7 +54,7 @@ static int cmd_help(int argc, char **argv) {
     printf("\nother tools: `vml <name>` runs `vml-<name>` from PATH\n"
            "script: vml app.vml [flags] [program args | -- program args]\n"
            "script flags: --time --disasm --ast --parse-only --gc-stress --no-gc --no-io --no-coroutine --no-random\n"
-           "              --lib-path <dir> --pkg <name=dir>\n");
+           "              --lib-path <dir> --pkg <name=dir> --deny <module | pkg.*>\n");
     return 0;
 }
 

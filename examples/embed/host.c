@@ -92,6 +92,12 @@ static const char *SCRIPT =
     "    let n: int = 0\n"
     "    while true { n += 1 }\n"
     "    return n\n"
+    "}\n"
+    "\n"
+    "func spin_for(): int {\n"
+    "    let n: int = 0\n"
+    "    for i in 2000000000 { n += 1 }\n"
+    "    return n\n"
     "}\n";
 
 static void exercise(VML_State *L, const char *label) {
@@ -112,6 +118,8 @@ static void exercise(VML_State *L, const char *label) {
     vml_set_fuel(L, 100000);
     r = vml_call(L, "spin", "");
     CHECK(r == VML_ERR_RUNTIME && strstr(vml_last_error(L), "fuel") != NULL, "fuel limit stops infinite loop");
+    r = vml_call(L, "spin_for", "");
+    CHECK(r == VML_ERR_RUNTIME && strstr(vml_last_error(L), "fuel") != NULL, "fuel limit stops a long for loop");
     vml_set_fuel(L, 0);
 }
 

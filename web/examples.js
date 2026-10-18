@@ -122,7 +122,10 @@ func empty_doc(): JsonDoc {
 }
 
 func main() {
-    let text = "{\\"name\\": \\"vml\\", \\"ports\\": [80, 443], \\"debug\\": false}"
+    ## ""[ ... ] is a raw string: no escapes needed, may span lines
+    let text = ""[
+{"name": "vml", "ports": [80, 443], "debug": false}
+]
     let doc = json.parse(text) catch e { print("bad JSON: " + e); empty_doc() }
     print(doc:get_str(doc:root(), "name") ?? "?")
     print(doc:int(doc:find("ports.1") ?? 0) ?? 0)
@@ -156,6 +159,27 @@ func main() {
     let words = "the quick brown fox":split(" ")
     print(words:len())
     print("vml":upper() + " " + "  trim me  ":trim())
+}
+`,
+    },
+    {
+      id: "sandbox",
+      title: "Sandbox",
+      code: `## The host decides which modules a script may use.
+## Turn modules off in "Sandbox" below and run this again.
+import std.random
+import std.time
+import std.os
+
+func main() {
+    let seed = time.unix()
+    print(f"dice: {random.range(seed, 1, 7)}")
+    print(f"running on {os.platform()}")
+
+    ## Fuel stops runaway scripts: lower it below and watch this loop stop
+    let n = 0
+    for i in 2000000 { n += i % 3 }
+    print(f"counted {n}")
 }
 `,
     },

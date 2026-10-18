@@ -100,6 +100,8 @@ int cli_run_script(int argc, char **argv) {
         else if (vm_str_eq_cstr(argv[i], alen, "--no-random") == VM_TRUE)    vm_config_disable(&cfg, VM_FEAT_STD_RANDOM);
         else if (vm_str_eq_cstr(argv[i], alen, "--lib-path") == VM_TRUE && i + 1 < argc) {
             vm_config_set_lib_path(&cfg, argv[++i]);
+        } else if (vm_str_eq_cstr(argv[i], alen, "--deny") == VM_TRUE && i + 1 < argc) {
+            (void)vm_config_deny_module(&cfg, argv[++i]);
         } else if (vm_str_eq_cstr(argv[i], alen, "--pkg") == VM_TRUE && i + 1 < argc) {
             const char *spec = argv[++i];
             vm_u32 slen = vm_str_len(spec);

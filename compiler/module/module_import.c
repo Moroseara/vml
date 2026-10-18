@@ -24,6 +24,7 @@ static int find_std_module(const char *name, vm_u32 len) {
 }
 
 static void dir_of(char *out, const char *path);
+static void msg_join(char *out, vm_u32 cap, const char *const *parts, int n);
 static void normalize_path(char *out, const char *dir, const char *rel, vm_u32 rlen);
 
 /* Reads a whole file into memory owned by the chunk allocator (kept for the whole compile:
@@ -231,6 +232,19 @@ static vm_u32 import_full_name(char *out, const char *pkg, vm_u32 pkglen, const 
     return vm_str_len(out);
 }
 
+/* The host decides which modules a script may use (SPEC 8). Prelude modules are always there. */
+static vm_bool module_allowed(Compiler *c, const char *full) {
+    if (c->config == VM_NULL) return VM_TRUE;
+    vm_u32 fl = vm_str_len(full);
+    if (vm_str_eq_cstr(full, fl, "std.array") || vm_str_eq_cstr(full, fl, "std.string") || vm_str_eq_cstr(full, fl, "std.map")) return VM_TRUE;
+    if (vm_config_module_denied(c->config, full, fl) == VM_FALSE) return VM_TRUE;
+    char msg[200];
+    const char *p[] = {"Module '", full, "' is turned off by the host program (it is not available here)"};
+    msg_join(msg, sizeof(msg), p, 3);
+    c_error(c, msg);
+    return VM_FALSE;
+}
+
 int c_load_module_file(Compiler *c, const char *pkg, vm_u32 pkglen, const char *mod, vm_u32 modlen,
                        const char *handle, vm_u32 hlen) {
     char full[128];
@@ -243,6 +257,13 @@ int c_load_module_file(Compiler *c, const char *pkg, vm_u32 pkglen, const char *
         known = find_loaded_full(c, sfull, vm_str_len(sfull));
     }
     if (known >= 0) return known;
+    {
+        /* `import math` is std.math when std has it */
+        char probe[128];
+        vm_str_copy(probe, full, flen, 128);
+        if (pkg == mod && pkglen == modlen && find_std_module(mod, modlen) >= 0) vm_str_join_dot(probe, 128, "std", 3, mod, modlen);
+        if (!module_allowed(c, probe)) return -1;
+    }
     for (int i = 0; i < c->num_loaded_modules; i++) {
         if (vm_str_eq(c->loaded_modules[i], vm_str_len(c->loaded_modules[i]), handle, hlen) == VM_TRUE) {
             char msg[200];
@@ -784,6 +805,7 @@ int c_import_path(Compiler *c, const char *rel, vm_u32 rlen, vm_bool has_select,
     }
     int known = find_loaded_full(c, declared, vm_str_len(declared));
     if (known >= 0) return known;
+    if (!module_allowed(c, declared)) return -1;
 
     const char *handle = declared;
     vm_u32 hlen = vm_str_len(declared);

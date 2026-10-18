@@ -32,6 +32,7 @@ typedef enum {
 } VMFeatureFlags;
 
 #define VM_MAX_PKG_MOUNTS 8
+#define VM_MAX_DENIED     32
 
 typedef struct {
     char pkg_name[32];
@@ -44,6 +45,9 @@ typedef struct {
     char           lib_path[128];    /* Custom library search path (`--lib-path`) */
     VMPackageMount pkg_mounts[VM_MAX_PKG_MOUNTS];
     vm_u32         num_pkg_mounts;
+    /* Modules the host turned off, by full name ("std.fs") or prefix ("game.debug.*") */
+    char           denied[VM_MAX_DENIED][64];
+    vm_u32         num_denied;
 } VMConfig;
 
 void        vm_config_init_default(VMConfig *cfg);
@@ -54,6 +58,9 @@ const char *vm_config_resolve_package(const VMConfig *cfg, const char *pkg_name,
 void        vm_config_enable(VMConfig *cfg, vm_u32 feature_flag);
 void        vm_config_disable(VMConfig *cfg, vm_u32 feature_flag);
 vm_bool     vm_config_has(const VMConfig *cfg, vm_u32 feature_flag);
+vm_bool     vm_config_deny_module(VMConfig *cfg, const char *name);            /* VM_FALSE = list full */
+/* VM_TRUE when the host turned this module off (deny list, or a disabled VM_FEAT_STD_* flag) */
+vm_bool     vm_config_module_denied(const VMConfig *cfg, const char *full, vm_u32 len);
 
 /* Native C Standard Library Loader (`std.*`) directly into `VMChunk` */
 vm_bool     vm_embed_load_stdlib(VMChunk *chunk, const char *pkg, vm_u32 pkglen, const char *mod, vm_u32 modlen);
