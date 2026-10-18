@@ -9,15 +9,6 @@ const ALL_MODULES = [
 ];
 
 export default function App() {
-  const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem("vml.theme") ||
-        (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    } catch {
-      return "light";
-    }
-  });
-
   const [vml, setVml] = useState(null);
   const [vmVersion, setVmVersion] = useState("0.1");
   const [status, setStatus] = useState("loading"); // loading, ready, running, error
@@ -74,15 +65,7 @@ export default function App() {
 
   const textareaRef = useRef(null);
 
-  // Sync theme to root DOM
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    try {
-      localStorage.setItem("vml.theme", theme);
-    } catch {}
-  }, [theme]);
-
-  // Load WebAssembly VM
+  // Initialize WebAssembly VM
   useEffect(() => {
     VmlWeb.load("vml.wasm")
       .then((instance) => {
@@ -90,7 +73,6 @@ export default function App() {
         setVmVersion(instance.version || "0.1");
         setStatus("ready");
         setStatusText("Ready");
-        // Initial run
         execute(instance, code, fuel, denied, gcStress);
       })
       .catch((err) => {
@@ -112,7 +94,6 @@ export default function App() {
     setStatus("running");
     setStatusText("Running...");
 
-    // Allow UI to paint before blocking synchronous execution
     setTimeout(() => {
       try {
         const res = targetVm.run(src, {
@@ -130,12 +111,12 @@ export default function App() {
       } catch (e) {
         setOutput({
           stdout: "",
-          stderr: "VM Execution Exception: " + e.message,
+          stderr: "Execution error: " + e.message,
           code: -1,
           ms: 0,
         });
         setStatus("error");
-        setStatusText("Execution Crash");
+        setStatusText("Crash");
       }
     }, 16);
   }
@@ -253,50 +234,42 @@ export default function App() {
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "");
 
   return (
-    <div className="container">
-      {/* Top Header */}
-      <header className="top-bar">
-        <a className="brand" href="#top">
-          <span>vml</span>
-          <span className="badge">v{vmVersion}</span>
+    <div className="page-wrapper">
+      {/* Header */}
+      <header className="site-header">
+        <a className="brand-title" href="#top">
+          <span className="brand-name">vml</span>
+          <span className="brand-ver">v{vmVersion}</span>
         </a>
-        <nav className="nav-links">
-          <a href="#workbench">[Playground]</a>
-          <a href="#tour">[Language]</a>
-          <a href="#start">[Quickstart]</a>
-          <a href="#status">[Status]</a>
-          <a href="https://github.com/Moroseara/vml" target="_blank" rel="noreferrer">[GitHub]</a>
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title="Toggle Light / Dark mode"
-          >
-            {theme === "dark" ? "☼ LIGHT" : "☾ DARK"}
-          </button>
+        <nav className="nav-menu">
+          <a href="#playground">Playground</a>
+          <a href="#tour">Language</a>
+          <a href="#quickstart">Quickstart</a>
+          <a href="#status">Status</a>
+          <a href="https://github.com/Moroseara/vml" target="_blank" rel="noreferrer">GitHub</a>
         </nav>
       </header>
 
-      {/* Hero Summary */}
-      <div className="hero-box">
+      {/* Overview Card */}
+      <div className="overview-card">
         <h1>vml — compact bytecode language & fast register VM</h1>
         <p>
-          Statically typed, errors as values, zero-fluff syntax, and builds into a single self-contained binary.
-          The interactive playground below runs real <code>vml</code> via WebAssembly directly in your browser.
+          Statically typed, errors as values, clean package layout, and single-file executable output.
+          This playground runs the compiler and register VM entirely inside your browser via WebAssembly.
         </p>
       </div>
 
-      {/* Main Workbench Grid */}
-      <div className="workbench" id="workbench">
-        {/* Editor Box */}
-        <div className="box">
-          <div className="tab-bar" role="tablist">
+      {/* Playground Area */}
+      <div className="playground-grid" id="playground">
+        {/* Editor Panel */}
+        <div className="panel-card">
+          <div className="tabs-header" role="tablist">
             {EXAMPLES.map((ex) => (
               <button
                 key={ex.id}
                 role="tab"
                 type="button"
-                className={`tab-btn ${activeTab === ex.id ? "active" : ""}`}
+                className={`tab-item ${activeTab === ex.id ? "active" : ""}`}
                 onClick={() => handleSelectTab(ex.id)}
               >
                 {ex.title}
@@ -304,21 +277,21 @@ export default function App() {
             ))}
           </div>
 
-          <div className="editor-wrapper">
+          <div className="editor-container">
             <textarea
               ref={textareaRef}
-              className="code-editor"
+              className="editor-textarea"
               spellCheck="false"
               autoCapitalize="off"
               autoComplete="off"
               value={code}
               onChange={handleCodeChange}
               onKeyDown={handleKeyDown}
-              aria-label="vml source code editor"
+              aria-label="vml source code"
             />
           </div>
 
-          <div className="action-bar">
+          <div className="panel-footer">
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <button
                 type="button"
@@ -326,43 +299,43 @@ export default function App() {
                 disabled={status === "loading" || status === "running"}
                 onClick={handleRun}
               >
-                ▶ RUN ({isMac ? "⌘↵" : "Ctrl+↵"})
+                Run ({isMac ? "⌘↵" : "Ctrl+↵"})
               </button>
               <button
                 type="button"
                 className="btn btn-sm"
                 onClick={handleReset}
-                title="Restore default code for this example"
+                title="Reset to original example code"
               >
                 Reset
               </button>
             </div>
-            <div className="status-pill">
-              <span className={`status-dot ${status}`} />
+            <div className="status-indicator">
+              <span className={`status-circle ${status}`} />
               <span>{statusText}</span>
             </div>
           </div>
         </div>
 
-        {/* Output Console Box */}
-        <div className="box">
-          <div className="term-head">
-            <span>TERMINAL OUTPUT (stdout / stderr)</span>
+        {/* Output Panel */}
+        <div className="panel-card">
+          <div className="output-header">
+            <span>Output (stdout / stderr)</span>
             <span>{output.ms > 0 ? `${output.ms.toFixed(1)} ms` : ""}</span>
           </div>
 
-          <div className="terminal-window">
+          <div className="output-body">
             {output.stdout && <div>{output.stdout}</div>}
-            {output.stderr && <div className="term-err">{output.stderr}</div>}
+            {output.stderr && <div className="err-msg">{output.stderr}</div>}
             {!output.stdout && !output.stderr && (
-              <span className="term-dim">
-                {status === "loading" ? "Initializing WebAssembly runtime..." : "# Output will appear here."}
+              <span className="empty-hint">
+                {status === "loading" ? "Initializing WebAssembly VM..." : "Output will appear here."}
               </span>
             )}
           </div>
 
-          <div className="action-bar">
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--muted)" }}>
+          <div className="panel-footer">
+            <span style={{ fontSize: "12px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
               Exit code: <strong>{output.code !== null ? output.code : 0}</strong>
             </span>
             <button
@@ -376,19 +349,19 @@ export default function App() {
         </div>
       </div>
 
-      {/* Sandbox & Limits Fieldset */}
-      <fieldset className="retro-box">
-        <legend>[ Host Sandbox & Limits ]</legend>
-        <p style={{ margin: "0 0 8px 0", fontSize: "0.88rem", color: "var(--muted)" }}>
-          Simulates an embedding host (e.g. game engine or microservice) disabling specific standard modules or restricting CPU execution fuel.
+      {/* Sandbox Controls Card */}
+      <div className="sandbox-card">
+        <h2>Host Sandbox & Permissions</h2>
+        <p className="sandbox-desc">
+          Controls which standard modules the host allows scripts to import, plus loop fuel limits to prevent runaway scripts.
         </p>
 
-        <div className="sandbox-mods">
+        <div className="module-tags">
           {ALL_MODULES.map((m) => {
             const fullName = "std." + m;
             const isDenied = denied.includes(fullName);
             return (
-              <label key={m} className={`mod-item ${isDenied ? "denied" : ""}`}>
+              <label key={m} className={`module-tag ${isDenied ? "denied" : ""}`}>
                 <input
                   type="checkbox"
                   checked={!isDenied}
@@ -400,10 +373,10 @@ export default function App() {
           })}
         </div>
 
-        <div className="knobs-row">
+        <div className="sandbox-options">
           <label>
-            Fuel Limit:{" "}
-            <select className="retro-select" value={fuel} onChange={handleFuelChange}>
+            Fuel limit:{" "}
+            <select className="clean-select" value={fuel} onChange={handleFuelChange}>
               <option value="1000000">1,000,000 loops</option>
               <option value="50000000">50,000,000 loops</option>
               <option value="0">Unlimited (0)</option>
@@ -417,35 +390,33 @@ export default function App() {
               onChange={handleGcToggle}
               style={{ marginRight: "6px" }}
             />
-            GC Stress (collect at each safepoint)
+            GC stress (collect at every safepoint)
           </label>
 
           <button type="button" className="btn btn-sm" onClick={allowAllModules}>
-            Allow All Modules
+            Allow all modules
           </button>
         </div>
-      </fieldset>
+      </div>
 
-      {/* Language Tour Cards */}
-      <div id="tour" style={{ marginTop: "32px" }}>
-        <h2 style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", borderBottom: "2px solid var(--border)", paddingBottom: "6px" }}>
-          [ Language Features ]
-        </h2>
-        <div className="section-grid">
-          <div className="doc-card">
+      {/* Language Overview Section */}
+      <div id="tour">
+        <h2 className="section-heading">Language Features</h2>
+        <div className="cards-grid">
+          <div className="doc-box">
             <h3>Errors as Values</h3>
-            <p>Functions that can fail state it explicitly in their return type: <code>T ! E</code>. Handle errors with <code>catch</code> or propagate with <code>?</code>.</p>
-            <pre className="code-snippet"><code>{`func parse_int(s: string): int ! string {
+            <p>Functions that can fail declare it in their return type: <code>T ! E</code>. Callers handle it with <code>catch</code> or propagate with <code>?</code>.</p>
+            <pre className="snippet-pre"><code>{`func parse_int(s: string): int ! string {
     if #s == 0 { throw "empty string" }
     return "0123456789":find(s)?
 }
 let n = parse_int("42") catch 0`}</code></pre>
           </div>
 
-          <div className="doc-card">
+          <div className="doc-box">
             <h3>Packages & Namespaces</h3>
-            <p>Packages correspond cleanly to directories. Public functions and types are exported with <code>pub</code>, keeping internal implementation private.</p>
-            <pre className="code-snippet"><code>{`## math/vector.vml
+            <p>Packages correspond directly to folders. Shared functions and structures are exported cleanly using <code>pub</code>.</p>
+            <pre className="snippet-pre"><code>{`## math/vector.vml
 module math.vector
 pub struct Vec2 { pub x: float, pub y: float }
 pub func (v: Vec2) length(): float {
@@ -453,40 +424,38 @@ pub func (v: Vec2) length(): float {
 }`}</code></pre>
           </div>
 
-          <div className="doc-card">
-            <h3>Single-File Executable Binaries</h3>
-            <p><code>vml build</code> bundles the bytecode runtime and all compiled dependencies into one standalone binary with zero runtime prerequisites.</p>
-            <pre className="code-snippet"><code>{`$ vml build
+          <div className="doc-box">
+            <h3>Single-File Binaries</h3>
+            <p><code>vml build</code> outputs standalone runnable programs carrying the runtime with them. No installation required on target machines.</p>
+            <pre className="snippet-pre"><code>{`$ vml build
 built dist/app
-$ ./dist/app --verbose
+$ ./dist/app
 ready.`}</code></pre>
           </div>
 
-          <div className="doc-card">
-            <h3>Fast C Embedding API</h3>
-            <p>Expose native C functions, register host hooks, inject configurations, and enforce strict execution fuel limits for sandboxing untrusted scripts.</p>
-            <pre className="code-snippet"><code>{`VML_State *L = vml_new(&opts);
+          <div className="doc-box">
+            <h3>C Embedding API</h3>
+            <p>Integrate directly into C applications. Register custom host functions, configure execution fuel, and isolate environments.</p>
+            <pre className="snippet-pre"><code>{`VML_State *L = vml_new(&opts);
 vml_set_args(L, argc, argv);
 vml_load_file(L, "script.vml");`}</code></pre>
           </div>
         </div>
       </div>
 
-      {/* Getting Started */}
-      <div id="start" style={{ marginTop: "24px" }}>
-        <h2 style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", borderBottom: "2px solid var(--border)", paddingBottom: "6px" }}>
-          [ Quick Start ]
-        </h2>
-        <div className="doc-card">
-          <p>Build from source with standard C compiler and tools on macOS and Linux:</p>
-          <pre className="code-snippet"><code>{`# 1. Clone repository
+      {/* Quickstart Section */}
+      <div id="quickstart">
+        <h2 className="section-heading">Quickstart</h2>
+        <div className="doc-box">
+          <p>Clone and build from source using any standard C compiler on macOS or Linux:</p>
+          <pre className="snippet-pre"><code>{`# 1. Clone repository
 git clone https://github.com/Moroseara/vml.git
 cd vml
 
 # 2. Build and run tests
 make -j8 && make test
 
-# 3. Create a new project
+# 3. Create and run a new project
 ./vml new myproject
 cd myproject
 ../vml run`}</code></pre>
@@ -494,48 +463,46 @@ cd myproject
       </div>
 
       {/* Project Status */}
-      <div id="status" style={{ marginTop: "24px" }}>
-        <h2 style={{ fontFamily: "var(--font-mono)", fontSize: "1.3rem", borderBottom: "2px solid var(--border)", paddingBottom: "6px" }}>
-          [ Project Status & Roadmap ]
-        </h2>
-        <table className="status-table">
+      <div id="status">
+        <h2 className="section-heading">Project Status</h2>
+        <table className="clean-table">
           <thead>
             <tr>
-              <th>Status</th>
-              <th>Component / Capability</th>
+              <th style={{ width: "90px" }}>Status</th>
+              <th>Feature / Component</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="status-done">[DONE]</td>
-              <td>Register-based bytecode VM with garbage collection and loop fuel sandboxing</td>
+              <td><span className="badge-done">DONE</span></td>
+              <td>Register-based bytecode VM with garbage collector and loop fuel</td>
             </tr>
             <tr>
-              <td className="status-done">[DONE]</td>
-              <td>Compiler pipeline: lexer, parser, type checker, bytecode emitter</td>
+              <td><span className="badge-done">DONE</span></td>
+              <td>Compiler pipeline: lexer, recursive-descent parser, type checker, emitter</td>
             </tr>
             <tr>
-              <td className="status-done">[DONE]</td>
+              <td><span className="badge-done">DONE</span></td>
               <td>Error handling: typed errors, <code>?</code> operator, <code>catch</code> blocks</td>
             </tr>
             <tr>
-              <td className="status-done">[DONE]</td>
+              <td><span className="badge-done">DONE</span></td>
               <td>Standard library: string, array, map, math, json, fmt, bytes, fs, os</td>
             </tr>
             <tr>
-              <td className="status-done">[DONE]</td>
+              <td><span className="badge-done">DONE</span></td>
               <td>WebAssembly build for in-browser playground execution</td>
             </tr>
             <tr>
-              <td className="status-next">[NEXT]</td>
+              <td><span className="badge-next">NEXT</span></td>
               <td>Coroutines and cooperatively yielding tasks</td>
             </tr>
             <tr>
-              <td className="status-next">[NEXT]</td>
+              <td><span className="badge-next">NEXT</span></td>
               <td>Direct C Foreign Function Interface (FFI) bindings</td>
             </tr>
             <tr>
-              <td className="status-next">[NEXT]</td>
+              <td><span className="badge-next">NEXT</span></td>
               <td>Language Server Protocol (LSP) and code formatter</td>
             </tr>
           </tbody>
@@ -543,7 +510,7 @@ cd myproject
       </div>
 
       {/* Footer */}
-      <footer className="retro-footer">
+      <footer className="clean-footer">
         <div>vml — bytecode language & register VM</div>
         <div>Built with React & WebAssembly</div>
       </footer>
