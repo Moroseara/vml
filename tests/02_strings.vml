@@ -1,0 +1,53 @@
+##[ Test Suite 02: Strings, F-Strings, Raw Strings, `#str` & Unified `String` Methods ]
+
+func main() {
+    ## 1. Normal String, `+=` Concatenation, `#s` Length & Comparisons
+    let s1: string = "hello"
+    let s2: string = " world"
+    let s3: string = s1 + s2
+    assert(s3 == "hello world", "String concatenation failed")
+    assert(#s1 == 5 && #s3 == 11, "#str length operator failed")
+    assert("apple" < "banana" && "banana" > "apple" && "abc" != "xyz", "String ordering comparison failed")
+    assert("world" in s3, "'in' substring check failed")
+
+    let mut_s: string = "hi"
+    mut_s += "!"
+    assert(mut_s == "hi!", "String += failed")
+
+    ## 2. Raw String `""[...]`
+    let raw: string = ""[line1
+line2 "quoted" [nested bracket ok] {not_interpolated}]
+    assert(#raw > 20, "Raw string length failed")
+
+    ## 3. Format String `f"..."` with interpolation and braces escaping
+    let name: string = "Antigravity"
+    let score: i32 = 99
+    let msg: string = f"Hero: {name}, Score: {score}, Braces: {{escaped}}, Triple: {{{name}}}"
+    assert(msg == "Hero: Antigravity, Score: 99, Braces: {escaped}, Triple: {Antigravity}", "F-string interpolation failed")
+
+    ## 4. Unified `String` & Primitive `:method()` Calls (including `:format`, `:trim`, `:find`, `:replace`)
+    let base: string = "vmlang is awesome"
+    assert(base:upper() == "VMLANG IS AWESOME", "s:upper() failed")
+    assert(base:upper():lower() == "vmlang is awesome", "Chained s:upper():lower() failed")
+    assert(base:sub(0, 6) == "vmlang", "s:sub(0, 6) failed")
+    assert(base:len() == 17, "s:len() failed")
+    assert(base:find("awesome") == 10, "s:find() failed")
+    assert(base:contains("awesome") == true, "s:contains() failed")
+    assert(base:replace("awesome", "fast") == "vmlang is fast", "s:replace() failed")
+
+    let padded: string = "   hello {}: lv={}   "
+    let formatted: string = padded:trim():format("Hero", 42):upper()
+    assert(formatted == "HELLO HERO: LV=42", "Chained :trim():format():upper() failed")
+
+    assert(String.format("x={}, y={}", 10, 20) == "x=10, y=20", "String.format failed")
+    assert(String.format("a={}, b={}", "ok", 7) == "a=ok, b=7", "String.format failed")
+
+    ## 5. String character iteration (`for ch in str`)
+    let joined: string = ""
+    for ch in "abc" {
+        joined += ch + "-"
+    }
+    assert(joined == "a-b-c-", "String character iteration failed")
+
+    print("Test 02 (Strings & Methods): PASS")
+}

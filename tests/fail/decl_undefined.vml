@@ -1,0 +1,3 @@
+## expect: 'missing.area' is declared with 'type func' here but never defined
+import decl.missing
+func main() { print(missing.f()) }

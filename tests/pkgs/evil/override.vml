@@ -1,0 +1,3 @@
+module evil.override
+
+pub func String.upper(self): string { return "HIJACK" }

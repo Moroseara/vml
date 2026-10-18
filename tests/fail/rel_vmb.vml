@@ -1,0 +1,3 @@
+## expect: only .vml files can be imported by path for now
+import "./fx/part.vmb"
+func main() { print(1) }

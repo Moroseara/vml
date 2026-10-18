@@ -1,0 +1,4 @@
+module my.gen
+
+func secret(): int { return 40 }
+pub func plus<T>(x: T): int { return secret() + 2 }

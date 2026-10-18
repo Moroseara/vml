@@ -1,0 +1,198 @@
+## std.json internal file: the parser (no `module` line, so it is part of std.json)
+
+@[intrinsic("parse_f64")] func raw_parse_f64(s: string): f64
+
+func new_doc(): JsonDoc {
+    let d: JsonDoc
+    let links: i32[] = []
+    let nums: f64[] = []
+    let strs: string[] = []
+    let keys: string[] = []
+    d.links = links
+    d.nums = nums
+    d.strs = strs
+    d.keys = keys
+    return d
+}
+
+## Appends a node, links it as the last child of `parent` (-1 = root); returns its id
+func add_node(d: JsonDoc, kind: i32, parent: i32, key: string): i32 {
+    let links: i32[] = d.links
+    let nums: f64[] = d.nums
+    let strs: string[] = d.strs
+    let keys: string[] = d.keys
+    let id = nums:len()
+    links:push(kind)
+    links:push(-1)
+    links:push(-1)
+    links:push(0)
+    links:push(-1)
+    nums:push(0.0 as f64)
+    strs:push("")
+    keys:push(key)
+    if parent >= 0 {
+        let p = parent * 5
+        if links[p + FIRST] < 0 {
+            links[p + FIRST] = id
+        } else {
+            links[links[p + LAST] * 5 + NEXT] = id
+        }
+        links[p + LAST] = id
+        links[p + COUNT] = links[p + COUNT] + 1
+    }
+    return id
+}
+
+## Scanning loops run in C: skip whitespace, find the end of a plain string run, find the end of a number
+@[intrinsic("str_skip_ws")]    func skip_ws(s: string, pos: i32): i32
+@[intrinsic("str_scan_plain")] func scan_plain(s: string, pos: i32): i32
+@[intrinsic("str_span_num")]   func span_num(s: string, pos: i32): i32
+
+func hex4(s: string, at: i32): i32 {
+    let v: i32 = 0
+    for k in 0..4 {
+        let c = s:byte(at + k)
+        let d: i32 = -1
+        if c >= 48 && c <= 57 { d = c - 48 }
+        if c >= 97 && c <= 102 { d = c - 87 }
+        if c >= 65 && c <= 70 { d = c - 55 }
+        if d < 0 { return -1 }
+        v = v * 16 + d
+    }
+    return v
+}
+
+## UTF-8 bytes of a code point
+func utf8(cp: i32): string {
+    if cp < 128 { return String.from_byte(cp) }
+    if cp < 2048 {
+        return String.from_byte(192 | (cp >> 6)) + String.from_byte(128 | (cp & 63))
+    }
+    return String.from_byte(224 | (cp >> 12)) + String.from_byte(128 | ((cp >> 6) & 63)) + String.from_byte(128 | (cp & 63))
+}
+
+## Reads a string starting at the opening quote; stores it in node `id`; returns the position after it
+func parse_string(d: JsonDoc, s: string, pos: i32, out: string[]): i32 ! string {
+    let n = s:len()
+    let i = pos + 1
+    ## Fast path: no escapes -> one substring, no parts array
+    let stop = scan_plain(s, i)
+    if stop < n && s:byte(stop) == 34 {
+        out:push(s:sub(i, stop - i))
+        return stop + 1
+    }
+    let parts: string[] = []
+    let run = i
+    while i < n {
+        i = scan_plain(s, i)
+        if i >= n { break }
+        let c = s:byte(i)
+        if c == 34 {
+            parts:push(s:sub(run, i - run))
+            out:push(parts:join(""))
+            return i + 1
+        }
+        if c == 92 {
+            parts:push(s:sub(run, i - run))
+            if i + 1 >= n { throw f"unterminated escape at {i}" }
+            let e = s:byte(i + 1)
+            if e == 110 { parts:push("\n") }
+            else if e == 116 { parts:push("\t") }
+            else if e == 114 { parts:push("\r") }
+            else if e == 98 { parts:push("\x08") }
+            else if e == 102 { parts:push("\x0c") }
+            else if e == 117 {
+                let cp = hex4(s, i + 2)
+                if cp < 0 { throw f"bad \\u escape at {i}" }
+                parts:push(utf8(cp))
+                i += 4
+            } else {
+                parts:push(String.from_byte(e))
+            }
+            i += 2
+            run = i
+            continue
+        }
+        throw f"control character in string at {i}"
+    }
+    throw "unterminated string"
+}
+
+func is_num_char(c: i32): bool {
+    return (c >= 48 && c <= 57) || c == 45 || c == 43 || c == 46 || c == 101 || c == 69
+}
+
+func parse_value(d: JsonDoc, s: string, pos: i32, parent: i32, key: string, depth: i32): i32 ! string {
+    if depth > MAX_DEPTH { throw "JSON nested too deeply" }
+    let n = s:len()
+    let i = skip_ws(s, pos)
+    if i >= n { throw "unexpected end of JSON" }
+    let c = s:byte(i)
+    if c == 123 {
+        let id = add_node(d, OBJECT, parent, key)
+        i = skip_ws(s, i + 1)
+        if i < n && s:byte(i) == 125 { return i + 1 }
+        while true {
+            i = skip_ws(s, i)
+            if i >= n || s:byte(i) != 34 { throw f"expected a key string at {i}" }
+            let k: string[] = []
+            i = parse_string(d, s, i, k)?
+            i = skip_ws(s, i)
+            if i >= n || s:byte(i) != 58 { throw f"expected ':' at {i}" }
+            i = parse_value(d, s, i + 1, id, k[0], depth + 1)?
+            i = skip_ws(s, i)
+            if i < n && s:byte(i) == 44 {
+                i += 1
+                continue
+            }
+            if i < n && s:byte(i) == 125 { return i + 1 }
+            throw f"expected ',' or '}}' at {i}"
+        }
+    }
+    if c == 91 {
+        let id = add_node(d, ARRAY, parent, key)
+        i = skip_ws(s, i + 1)
+        if i < n && s:byte(i) == 93 { return i + 1 }
+        while true {
+            i = parse_value(d, s, i, id, "", depth + 1)?
+            i = skip_ws(s, i)
+            if i < n && s:byte(i) == 44 {
+                i += 1
+                continue
+            }
+            if i < n && s:byte(i) == 93 { return i + 1 }
+            throw f"expected ',' or ']' at {i}"
+        }
+    }
+    if c == 34 {
+        let id = add_node(d, STRING, parent, key)
+        let v: string[] = []
+        let after = parse_string(d, s, i, v)?
+        let strs: string[] = d.strs
+        strs[id] = v[0]
+        return after
+    }
+    if s:starts_with_at("true", i) {
+        let id = add_node(d, BOOL, parent, key)
+        let nums: f64[] = d.nums
+        nums[id] = 1.0 as f64
+        return i + 4
+    }
+    if s:starts_with_at("false", i) {
+        add_node(d, BOOL, parent, key)
+        return i + 5
+    }
+    if s:starts_with_at("null", i) {
+        add_node(d, NULL, parent, key)
+        return i + 4
+    }
+    if is_num_char(c) {
+        let start = i
+        i = span_num(s, i)
+        let id = add_node(d, NUMBER, parent, key)
+        let nums: f64[] = d.nums
+        nums[id] = raw_parse_f64(s:sub(start, i - start))
+        return i
+    }
+    throw f"unexpected character at {i}"
+}

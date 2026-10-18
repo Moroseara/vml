@@ -1,0 +1,12 @@
+module std.bit
+
+##[ std.bit — band(a, b) etc. (the operators & | ^ << >> ~ do the same inline) ]
+
+pub func band(a: i32, b: i32): i32 { return a & b }
+pub func bor(a: i32, b: i32): i32 { return a | b }
+pub func bxor(a: i32, b: i32): i32 { return a ^ b }
+pub func bnot(a: i32): i32 { return ~a }
+pub func shl(a: i32, n: i32): i32 { return a << n }
+pub func shr(a: i32, n: i32): i32 { return a >> n }
+
+@[intrinsic("popcount32")] pub func count_ones(a: i32): i32

@@ -1,0 +1,3 @@
+module my.ui.widgets.button
+
+pub func label(): string { return "button" }

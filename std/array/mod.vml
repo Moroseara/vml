@@ -1,0 +1,68 @@
+module std.array
+
+##[ std.array — methods of every array (xs:push(1), xs:contains(2)).
+    Loaded automatically (prelude). ]
+
+## ---- intrinsics (one overload per element type the VM stores) ----
+@[intrinsic("arr_len")]   pub func Array.len(self): i32
+@[intrinsic("arr_push")]  pub func Array.push(self, v: int): i32
+@[intrinsic("arr_push")]  pub func Array.push(self, v: i32): i32
+@[intrinsic("arr_push")]  pub func Array.push(self, v: f32): i32
+@[intrinsic("arr_push")]  pub func Array.push(self, v: f64): i32
+@[intrinsic("arr_push")]  pub func Array.push(self, v: string): i32
+@[intrinsic("arr_push")]  pub func Array.push(self, v: bool): i32
+@[intrinsic("arr_pop")]   pub func Array.pop(self): i32
+@[intrinsic("arr_get")]   pub func Array.get(self, i: i32): i32
+@[intrinsic("arr_set")]   pub func Array.set(self, i: i32, v: int)
+@[intrinsic("arr_set")]   pub func Array.set(self, i: i32, v: i32)
+@[intrinsic("arr_set")]   pub func Array.set(self, i: i32, v: f32)
+@[intrinsic("arr_set")]   pub func Array.set(self, i: i32, v: f64)
+@[intrinsic("arr_set")]   pub func Array.set(self, i: i32, v: string)
+@[intrinsic("arr_set")]   pub func Array.set(self, i: i32, v: bool)
+@[intrinsic("arr_clear")] pub func Array.clear(self)
+@[intrinsic("arr_join")]  pub func Array.join(self, sep: string = ", "): string
+
+## ---- written in .vml ----
+## (overloads are chosen by argument types; the element type of `self` is not part of a signature)
+pub func Array.is_empty(self): bool {
+    return self:len() == 0
+}
+
+pub func Array.index_of(self: int[], v: int): i32 {
+    for i, x in self { if x == v { return i } }
+    return -1
+}
+
+pub func Array.index_of(self: i32[], v: i32): i32 {
+    for i, x in self { if x == v { return i } }
+    return -1
+}
+
+pub func Array.index_of(self: string[], v: string): i32 {
+    for i, x in self { if x == v { return i } }
+    return -1
+}
+
+pub func Array.contains(self: int[], v: int): bool { return self:index_of(v) >= 0 }
+pub func Array.contains(self: i32[], v: i32): bool { return self:index_of(v) >= 0 }
+pub func Array.contains(self: string[], v: string): bool { return self:index_of(v) >= 0 }
+
+## Reverses in place and returns the same array
+pub func Array.reverse(self): array {
+    let i: i32 = 0
+    let j = self:len() - 1
+    while i < j {
+        let t = self[i]
+        self[i] = self[j]
+        self[j] = t
+        i += 1
+        j -= 1
+    }
+    return self
+}
+
+pub func Array.sum(self: int[]): int {
+    let total = 0
+    for x in self { total += x }
+    return total
+}

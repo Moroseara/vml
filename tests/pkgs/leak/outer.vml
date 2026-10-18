@@ -1,0 +1,3 @@
+module leak.outer
+import leak.inner
+pub func value(): int { return inner.secret() }

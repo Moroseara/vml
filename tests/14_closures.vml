@@ -1,0 +1,109 @@
+##[ Test Suite 14: Closures (per-closure captured values, escaping closures, function types in let) ]
+import std.task
+
+func make_adder(n: i32): (x: i32): i32 {
+    return func(x: i32): i32 { return x + n }
+}
+
+func make_counter(): (): i32 {
+    let count: i32 = 0
+    return func(): i32 {
+        count += 1
+        return count
+    }
+}
+
+func apply_twice(f: (x: i32): i32, v: i32): i32 {
+    return f(f(v))
+}
+
+func make_multiplier_chain(a: i32): (x: i32): i32 {
+    let b: i32 = a * 10
+    let mk = func(): (x: i32): i32 {
+        return func(x: i32): i32 { return x * a + b }
+    }
+    return mk()
+}
+
+func run_for_index(i: i32, f: (x: i32): i32): i32 {
+    return f(i)
+}
+
+func risky(f: (x: i32): i32): i32 {
+    return f(0)
+}
+
+func main() {
+    ## 1. Escaping closures keep their own captured values
+    let add5: (x: i32): i32 = make_adder(5)
+    let add100 = make_adder(100)
+    assert(add5(1) == 6, "add5(1)")
+    assert(add100(1) == 101, "add100(1)")
+    assert(add5(10) == 15, "add5 kept its own n after add100 was created")
+
+    ## 2. Captured state lives as long as the closure (each counter is independent)
+    let c1 = make_counter()
+    let c2 = make_counter()
+    assert(c1() == 1 && c1() == 2 && c1() == 3, "c1 counts")
+    assert(c2() == 1, "c2 has its own count")
+    assert(c1() == 4, "c1 unaffected by c2")
+
+    ## 3. Enclosing function and closure share captured variables (both directions)
+    let n: i32 = 5
+    let read_n = func(x: i32): i32 { return x + n }
+    assert(read_n(1) == 6, "closure reads n")
+    n = 10
+    assert(read_n(1) == 11, "closure sees outer write")
+    let total: i32 = 0
+    let add_total = func(x: i32): i32 {
+        total += x
+        return total
+    }
+    add_total(3)
+    add_total(4)
+    assert(total == 7, "outer sees closure writes")
+
+    ## 4. Closures as callbacks
+    assert(apply_twice(add5, 0) == 10, "callback closure")
+    assert(apply_twice(func(x: i32): i32 { return x * 3 }, 2) == 18, "callback lambda")
+
+    ## 5. Two levels of nesting capture through the middle function
+    let chain = make_multiplier_chain(3)
+    assert(chain(2) == 36, "nested capture: 2*3 + 30")
+
+    ## 6. Loop variables are captured per iteration
+    let sum: i32 = 0
+    for i in 0..4 {
+        sum += run_for_index(1, func(x: i32): i32 { return x + i })
+    }
+    assert(sum == 10, "loop capture: (1+0)+(1+1)+(1+2)+(1+3)")
+
+    ## 7. Recursive nested function that also captures
+    let base: i32 = 100
+    func countdown(k: i32): i32 {
+        if k == 0 { return base }
+        return countdown(k - 1) + 1
+    }
+    assert(countdown(5) == 105, "recursive closure")
+
+    ## 8. Sibling nested functions calling each other through captures
+    let scale: i32 = 2
+    func double_it(x: i32): i32 { return x * scale }
+    func quad(x: i32): i32 { return double_it(double_it(x)) }
+    assert(quad(3) == 12, "sibling call through capture")
+
+    ## 9. catch and tasks accept closures
+    let limit: i32 = 7
+    let val = add5(2) catch -1
+    assert(val == 7, "catch around closure call")
+    let boom = func(x: i32): i32 {
+        if x < limit { error("below limit") }
+        return x
+    }
+    let r2 = risky(boom) catch -1
+    assert(r2 == -1, "catch traps an error inside a closure")
+    let t = task.spawn(add100, 5)
+    assert(task.result(t) == 105, "task.spawn(closure)")
+
+    print("Test 14 (Closures): PASS")
+}

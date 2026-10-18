@@ -1,0 +1,9 @@
+func main() {
+    let a: int[] = []
+    let i: i32 = 0
+    while i < 1000000 { a:push(i) i = i + 1 }
+    let s: i32 = 0
+    i = 0
+    while i < 1000000 { s = s + a[i] i = i + 1 }
+    print(s)
+}

@@ -1,0 +1,21 @@
+module std.io
+
+##[ std.io — console output and line input ]
+
+@[intrinsic("print_str")]  pub func println(v: string)
+@[intrinsic("print_i32")]  pub func println(v: i32)
+@[intrinsic("print_i64")]  pub func println(v: int)
+@[intrinsic("print_f32")]  pub func println(v: f32)
+@[intrinsic("print_f64")]  pub func println(v: f64)
+@[intrinsic("print_bool")] pub func println(v: bool)
+@[intrinsic("io_write")]   pub func write(s: string)
+
+@[intrinsic("io_read_line")] func raw_read_line(): string
+@[intrinsic("io_eof")]       func raw_eof(): bool
+
+## Next line of standard input (without the newline), or none at end of input
+pub func read_line(): string? {
+    let line = raw_read_line()
+    if raw_eof() { return none }
+    return line
+}

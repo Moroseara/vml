@@ -1,0 +1,50 @@
+##[ Test Suite 08: Comment Syntax (`##[ ... ]` block comments & `##` line comments) & `#` Length ]
+
+##[ Multi-line documentation block
+   describing HeroPlayer entity with nested brackets [1, 2, 3] and "quotes"
+]
+struct HeroPlayer {
+    pub name: string = "Hero"
+    pub level: i32 = 1
+
+    ##[ Inline doc comment before method ]
+    pub func level_up(self: Self, step: i32): i32 {
+        ## Regular comment inside method
+        return self.level + step
+    }
+
+    operator # (self: Self): i32 {
+        return #self.name
+    }
+}
+
+##[ Computes power with math comment: x^3 ]
+func cube(x: i32): i32 {
+    ##[ Block comment inside function body ]
+    let res = x * x * x ## trailing line comment
+    return res
+}
+
+func main() {
+    ## 1. Normal execution with comments and `#p` length operator
+    let p: HeroPlayer
+    let next_lv = p:level_up(4)
+    assert(next_lv == 5, "HeroPlayer level_up failed")
+    assert(#p == 4, "#p struct length operator failed")
+
+    ## 2. Function with block comments
+    let c = cube(3)
+    assert(c == 27, "cube power failed")
+
+    ##[ 3. Block comment commenting out unused code
+    let should_not_run = 999
+    assert(false, "this should be skipped")
+    ]
+
+    ## Verify that 'doc' and 'help' can now be used as normal user variable names!
+    let doc: string = "user defined doc variable"
+    let help: i32 = 42
+    assert(#doc > 0 && help == 42, "user identifiers for doc/help failed")
+
+    print("Test 08 (Block & Line Comments): PASS")
+}

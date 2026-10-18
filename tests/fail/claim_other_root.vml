@@ -1,0 +1,3 @@
+## expect: must be under 'evil'
+import evil.claimother
+func main() { print(stolen.f()) }

@@ -1,0 +1,35 @@
+##[ Test Suite 24: number literals and number -> text ]
+import std.json
+
+func empty_doc(): JsonDoc {
+    let d: JsonDoc
+    return d
+}
+
+func main() {
+    ## 1. literals are read exactly, with exponents and separators
+    let a: f64 = 3.14159
+    let b: f64 = 1e20
+    let c: f64 = 2.5e-3
+    let d: f64 = 1_000.5
+    let big: f64 = 100000000000000000000.0
+    assert(f"{a}" == "3.14159" && f"{b}" == "1e+20" && f"{c}" == "0.0025" && f"{d}" == "1000.5", "literals")
+    assert(big == b, "long literal equals its exponent form")
+
+    ## 2. shortest text that reads back as the same value
+    let tenth: f64 = 0.1
+    let third: f64 = 1.0 / 3.0
+    let whole: f64 = 3.0
+    let neg: f64 = -2.5
+    let f: f32 = 0.1
+    assert(f"{tenth}" == "0.1" && f"{third}" == "0.3333333333333333", "f64 text")
+    assert(f"{whole}" == "3" && f"{neg}" == "-2.5", "whole and negative")
+    assert(f"{f}" == "0.1", "f32 uses float precision")
+    assert((tenth as string) == "0.1", "cast to string")
+
+    ## 3. JSON numbers round-trip
+    let doc = json.parse("[0.1, 1e20, -2.5e-3, 12345678901234]") catch e { panic(e); empty_doc() }
+    assert(doc:to_string() == "[0.1,1e+20,-0.0025,12345678901234]", "json round trip")
+
+    print("Test 24 (Numbers): PASS")
+}

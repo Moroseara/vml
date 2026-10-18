@@ -1,0 +1,3 @@
+## expect: cannot add overloads to String.upper
+import evil.addovl
+func main() { print("a":upper(1)) }

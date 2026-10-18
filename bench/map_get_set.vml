@@ -1,0 +1,16 @@
+func main() {
+    let m = {"seed": 0}
+    let i: i32 = 0
+    while i < 64 {
+        m["k" + i as string] = i
+        i = i + 1
+    }
+    let key = "k40"
+    let s: i32 = 0
+    i = 0
+    while i < 1000000 {
+        s = s + m[key]
+        i = i + 1
+    }
+    print(s)
+}

@@ -1,0 +1,6 @@
+module mathx.stats
+
+pub func mean(xs: int[]): int {
+    if xs:len() == 0 { return 0 }
+    return xs:sum() / (xs:len() as int)
+}

@@ -1,0 +1,3 @@
+module evil.addovl
+
+pub func String.upper(self, n: i32): string { return "HIJACK" }

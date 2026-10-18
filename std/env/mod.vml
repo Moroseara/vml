@@ -1,0 +1,12 @@
+module std.env
+
+##[ std.env — operating-system environment variables (read-only).
+    `let home = env.get("HOME") ?? "/"`. The host decides whether scripts may import it (VM_FEAT_STD_ENV). ]
+
+@[intrinsic("env_get")] func raw_get(key: string): string
+@[intrinsic("env_has")] pub func has(key: string): bool
+
+pub func get(key: string): string? {
+    if !has(key) { return none }
+    return raw_get(key)
+}

@@ -1,0 +1,3 @@
+## Internal file of module geo
+func scale(x: int, k: int): int { return x * k }
+pub const ORIGIN: int = 0

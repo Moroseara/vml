@@ -1,0 +1,24 @@
+##[ Test Suite 22: module x.y, pub, qualified access, renaming on import ]
+import my.util
+import other.util as ou
+import std.math
+import my.gen
+import my.split
+import my.folder
+import leak.shared
+import decl.api
+import my.ui.widgets.button
+import my.ui.widgets.slider as sl
+
+func main() {
+    assert(util.twice(4) == 8 && util.K == 7, "pub func / const through the module handle")
+    assert(ou.twice(1) == 999, "same last segment, renamed with as")
+    assert(math.sqrt(16.0 as f64) == (4.0 as f64), "std still resolves")
+    assert(gen.plus<int>(1) == 42, "generic instance keeps its module's private helpers")
+    assert(split.answer() == 42, "package module with an internal file imported by path")
+    assert(folder.name() == "folder:ok", "module as a folder: my/folder/mod.vml")
+    assert(shared.value() == 8 && inner.secret() == 7, "pub import shares leak.inner with our importers")
+    assert(api.area(2, 3) == 6 && api.double_area(2, 3) == 12, "type func declared in mod file, body in internal file")
+    assert(button.label() == "button" && sl.label() == "slider/track", "module names of any depth (a.b.c.d)")
+    print("Test 22 (Modules): PASS")
+}

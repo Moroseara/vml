@@ -1,0 +1,57 @@
+##[ Test Suite 01: Core Basics, Control Flow & Arithmetic ]
+
+func main() {
+    ## 1. Arithmetic & Precedence
+    let a: i32 = 10 + 20 * 2
+    assert(a == 50, "Operator precedence failed")
+    let b: i32 = (10 + 20) * 2
+    assert(b == 60, "Parenthesized precedence failed")
+    let c: i32 = 100 / 4 - 5
+    assert(c == 20, "Division precedence failed")
+    let d: i32 = 17 % 5
+    assert(d == 2, "Modulo failed")
+
+    ## 2. Reassignment & Compound Assignment
+    let x: i32 = 5
+    x += 10
+    assert(x == 15, "+= failed")
+    x -= 3
+    assert(x == 12, "-= failed")
+    x *= 2
+    assert(x == 24, "*= failed")
+    x /= 4
+    assert(x == 6, "/= failed")
+    x %= 4
+    assert(x == 2, "%= failed")
+
+    ## 3. Loops with break and continue
+    let sum: i32 = 0
+    for i in 0..10 {
+        if i == 5 { continue }
+        if i == 8 { break }
+        sum += i
+    }
+    ## i: 0 + 1 + 2 + 3 + 4 + 6 + 7 = 23
+    assert(sum == 23, "Loop break/continue failed")
+
+    ## 4. While loop
+    let w: i32 = 0
+    let count: i32 = 0
+    while w < 100 {
+        w += 25
+        count += 1
+    }
+    assert(w == 100, "While loop bound failed")
+    assert(count == 4, "While iteration count failed")
+
+    ## 5. Boolean logic & Full Float/Int Comparisons
+    let t: bool = true
+    let f: bool = false
+    assert(t && !f, "Boolean AND/NOT failed")
+    assert(f || t, "Boolean OR failed")
+    let fa: float = 3.5
+    let fb: float = 7.0
+    assert(fa < fb && fa <= 3.5 && fb > fa && fb >= 7.0 && fa != fb, "Float comparisons failed")
+
+    print("Test 01 (Basics & Control Flow): PASS")
+}

@@ -1,0 +1,3 @@
+## expect: part of this module cannot use
+import "./fx/part" {helper}
+func main() { print(helper()) }

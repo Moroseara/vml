@@ -1,0 +1,4 @@
+## expect: already imported from my.util
+import my.util
+import other.util
+func main() { print(util.twice(4)) }

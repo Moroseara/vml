@@ -1,0 +1,219 @@
+##[
+  Test Suite 10:
+  1. C `.h` / `.c` Style Flexible `type` Header & `struct`/`func` Implementation System
+  2. Function Prototypes (`type step_a = (n: int): int`), Mutual Recursion, Type Inference & Callbacks
+  3. `type VecOps { ... }` Mixing Signatures, Operators, Default Bodies & Auto-Inherited Fields
+  4. Out-of-Line Method & Operator Implementations (`func Vec2.len_sq`, `operator Vec2.+`)
+  5. Implicit Structural Matching (Static Duck Typing)
+  6. Wildcard & Scoped Module Imports (`import std.math {sin as s, *} as m`)
+  7. Frame-Scoped String Arena Reclamation
+]
+
+import std.math {sin as s, *} as m
+import std.bit {band as and_op, *} as b
+
+## 1. C `.h` style function prototypes (`type func fn(...)` & `type fn = (...)`) + mutual recursion + auto type inference
+type func step_a(n: int): int
+type step_b = (n: int): int
+
+func step_a(n) {
+    if (n <= 0) {
+        return 0
+    }
+    return n + step_b(n - 1)
+}
+
+func step_b(n) {
+    if (n <= 0) {
+        return 0
+    }
+    return (n * 2) + step_a(n - 1)
+}
+
+## Overloaded function prototypes via `type func`
+type func overloaded_calc(x: int): int
+type func overloaded_calc(x: float): float
+
+func overloaded_calc(x: int) {
+    return x * 10
+}
+
+func overloaded_calc(x: float) {
+    return x * 2.5
+}
+
+## Using `type func` signature as a callback parameter type
+func apply_callback(cb: step_a, v: int): int {
+    return cb(v)
+}
+
+## 2. `type struct VecOps` header mixing fields, default method body, and signature-only operator/method
+type struct VecOps {
+    x: float = 0.0,
+    y: float = 0.0,
+
+    ## Default implementation directly inside `type struct` header!
+    func dot(self: Self, other: Self): float {
+        return self.x * other.x + self.y * other.y
+    }
+
+    ## Header-only signatures (to be implemented in `struct` or out-of-line)
+    func scale(self: Self, factor: float): Self,
+    operator + (a: Self, b: Self): Self
+}
+
+## 3. `struct Vec2: VecOps` auto-inherits `x`, `y`, and default `dot()` from `VecOps`,
+##    and infers parameter/return types of `scale(self, factor)` from `VecOps`!
+struct Vec2: VecOps {
+    pub func scale(self, factor) {
+        let r: Vec2
+        r.x = self.x * factor
+        r.y = self.y * factor
+        return r
+    }
+}
+
+## 4. Out-of-line operator and method implementations (C `.c` style outside `struct` block)
+operator Vec2.+ (a, b) {
+    let r: Vec2
+    r.x = a.x + b.x
+    r.y = a.y + b.y
+    return r
+}
+
+func Vec2.len_sq(self: Self): float {
+    return self:dot(self)
+}
+
+## 5. Implicit Structural Matching (Static Duck Typing):
+##    `ImplicitVec` does NOT write `: VecOps`, but provides the matching fields, methods & operator!
+struct ImplicitVec {
+    pub x: float = 1.0
+    pub y: float = 2.0
+
+    pub func dot(self: Self, other: Self): float {
+        return self.x * other.x + self.y * other.y
+    }
+
+    pub func scale(self: Self, factor: float): Self {
+        let r: ImplicitVec
+        r.x = self.x * factor
+        r.y = self.y * factor
+        return r
+    }
+}
+
+operator ImplicitVec.+ (a: Self, b: Self): Self {
+    let r: ImplicitVec
+    r.x = a.x + b.x
+    r.y = a.y + b.y
+    return r
+}
+
+func read_vec_sum(v: VecOps): float {
+    return v.x + v.y
+}
+
+## 6. Helper for testing Frame-Scoped String Arena Reclamation
+func make_temp_message(iter: int): int {
+    let s1 = "iteration_" + (iter as string)
+    let s2 = s1:upper() + "_TEMP_BUFFER_PADDING_0123456789ABCDEF"
+    return #s2
+}
+
+func main() {
+    ## Test 1: Wildcard & Scoped Module Imports (`{sin as s, *} as m`)
+    assert(m.s(0.0) == 0.0, "Renamed wildcard import m.s(0.0) failed")
+    assert(m.cos(0.0) == 1.0, "Wildcard import m.cos(0.0) failed")
+    assert(m.sqrt(49.0) == 7.0, "Wildcard import m.sqrt(49.0) failed")
+    assert(m.abs(-42) == 42, "Wildcard import m.abs(-42) failed")
+    assert(m.PI > 3.14 && m.PI < 3.15, "Wildcard constant import m.PI failed")
+    assert(b.and_op(0xFF, 0x0F) == 15, "Renamed wildcard import b.and_op failed")
+    assert(b.count_ones(0x0F) == 4, "Wildcard import b.count_ones failed")
+    assert(b.shl(1, 5) == 32, "Wildcard import b.shl failed")
+
+    ## Test 2: Function prototypes, mutual recursion & auto type inference
+    ## step_a(3) = 3 + step_b(2) = 3 + (4 + step_a(1)) = 7 + (1 + step_b(0)) = 8
+    let mut_res = step_a(3)
+    assert(mut_res == 8, "Mutual recursion with type prototype failed")
+    assert(overloaded_calc(7) == 70, "Overloaded int prototype failed")
+    assert(overloaded_calc(4.0) == 10.0, "Overloaded float prototype failed")
+
+    ## Callback via `type step_a = (n: int): int`
+    let cb_res1 = apply_callback(step_a, 3)
+    assert(cb_res1 == 8, "Named function callback via type failed")
+    let cb_res2 = apply_callback(func(n: int): int { return n * 100 }, 5)
+    assert(cb_res2 == 500, "Lambda callback via type failed")
+
+    ## Test 3 & 4: `type VecOps` field inheritance, default `dot`, inferred `scale`, out-of-line `operator +` & `len_sq`
+    let v1: Vec2
+    v1.x = 3.0
+    v1.y = 4.0
+
+    let v2: Vec2
+    v2.x = 1.0
+    v2.y = 2.0
+
+    let v3 = v1 + v2
+    assert(v3.x == 4.0 && v3.y == 6.0, "Out-of-line operator Vec2.+ failed")
+
+    let v_scaled = v1:scale(2.0)
+    assert(v_scaled.x == 6.0 && v_scaled.y == 8.0, "Inferred method Vec2:scale failed")
+
+    let dot_val = v1:dot(v2)
+    assert(dot_val == 11.0, "Default method VecOps.dot inherited by Vec2 failed")
+    assert(v1:len_sq() == 25.0, "Out-of-line method Vec2:len_sq failed")
+
+    ## Test 5: Implicit Structural Matching (Static Duck Typing)
+    let iv1: ImplicitVec
+    iv1.x = 5.0
+    iv1.y = 7.0
+    let iv2: ImplicitVec
+    iv2.x = 2.0
+    iv2.y = 3.0
+    let iv3 = iv1 + iv2
+    assert(iv3.x == 7.0 && iv3.y == 10.0, "ImplicitVec out-of-line operator + failed")
+    assert(iv1 is VecOps, "Implicit structural matching (iv1 is VecOps) failed")
+    assert(read_vec_sum(iv1) == 12.0, "Passing structurally matched ImplicitVec to VecOps param failed")
+
+    ## Test 6: Zero-Pause Frame-Scoped String Arena Reclamation (2000 iterations of temp strings)
+    let total_len: int = 0
+    for i in 0..2000 {
+        total_len += make_temp_message(i)
+    }
+    assert(total_len > 80000, "Frame-scoped string arena reclamation loop failed")
+
+    ## Test 7: `if const`, `if let`, `while const`, `while let`
+    let const_branch_val: int = 0
+    if const true {
+        const_branch_val = 77
+    } else {
+        const_branch_val = 99
+    }
+    assert(const_branch_val == 77, "if const failed")
+
+    let if_let_res: int = 0
+    if let v = 25; v > 10 {
+        if_let_res = v * 2
+    }
+    assert(if_let_res == 50, "if let failed")
+
+    let w_const_cnt: int = 0
+    while const true {
+        w_const_cnt += 1
+        if w_const_cnt == 3 {
+            break
+        }
+    }
+    assert(w_const_cnt == 3, "while const failed")
+
+    let countdown: int = 4
+    let w_let_sum: int = 0
+    while let cur = countdown; cur > 0 {
+        w_let_sum += cur
+        countdown -= 1
+    }
+    assert(w_let_sum == 10, "while let failed")
+
+    print("Test 10 (Header Type System, Out-of-Line Ops & Frame Arena): PASS")
+}

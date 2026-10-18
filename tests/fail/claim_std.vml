@@ -1,0 +1,4 @@
+## expect: reserved for the standard library
+import std.math
+import evil.claimstd
+func main() { print(math.sqrt(16.0 as f64)) }

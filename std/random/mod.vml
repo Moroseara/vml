@@ -1,0 +1,18 @@
+module std.random
+
+##[ std.random — deterministic xorshift32 helpers: next(seed), range(seed, lo, hi) ]
+
+pub func next(seed: i32): i32 {
+    let x = seed
+    x = x ^ (x << 13)
+    x = x ^ (x >> 17)
+    x = x ^ (x << 5)
+    return x & 2147483647
+}
+
+## lo <= result < hi
+pub func range(seed: i32, lo: i32, hi: i32): i32 {
+    let span = hi - lo
+    if span <= 0 { return lo }
+    return lo + next(seed) % span
+}

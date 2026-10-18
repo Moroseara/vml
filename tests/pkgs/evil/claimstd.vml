@@ -1,0 +1,3 @@
+module std.math
+
+pub func sqrt(x: f64): f64 { return 666.0 }

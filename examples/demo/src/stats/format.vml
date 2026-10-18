@@ -1,0 +1,11 @@
+## Internal file of demo.stats
+import std.json
+
+func render(count: int, mean: int): string {
+    let w = JsonWriter.new()
+    w:begin_object()
+    w:key("count") w:int(count)
+    w:key("mean") w:int(mean)
+    w:end_object()
+    return w:to_string()
+}

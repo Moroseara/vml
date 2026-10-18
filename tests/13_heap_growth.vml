@@ -1,0 +1,61 @@
+##[ Test Suite 13: Growable Heap (string arena, string interning, arrays past old fixed caps) ]
+
+func mk(i: i32): string {
+    let a = "x" + i as string
+    return (a + "-" + a):upper()
+}
+
+func first_of(xs: string[]): string {
+    return xs[0]
+}
+
+func main() {
+    ## > 1024 unique strings (old string pool cap) and > 64KB arena
+    let n: i32 = 0
+    let i: i32 = 0
+    while i < 20000 {
+        let s = "k" + i as string
+        n = n + #s
+        i = i + 1
+    }
+    assert(n == 108890, "string arena growth failed")
+
+    ## Strings created inside callees roll back on return; interning must stay consistent
+    let total: i32 = 0
+    i = 0
+    while i < 5000 {
+        total = total + #mk(i)
+        i = i + 1
+    }
+    assert(total == 52780, "string rollback + interning failed")
+    assert(mk(7) == "X7-X7", "interned string equality failed")
+
+    ## > 256 elements (old array cap)
+    let a: i32[] = []
+    i = 0
+    while i < 100000 {
+        a:push(i)
+        i = i + 1
+    }
+    assert(#a == 100000, "array growth failed")
+    assert(a[99999] == 99999, "array element after growth wrong")
+
+    ## Typed `string[]` keeps its element type through indexing and params
+    let names: string[] = []
+    names:push("ab")
+    names:push("cd")
+    assert(names[0] + names[1] == "abcd", "string[] indexing returned wrong type")
+    assert(first_of(names) == "ab", "string[] param indexing failed")
+
+    ## > 64 entries (old map cap)
+    let m = {"seed": 0}
+    i = 0
+    while i < 2000 {
+        m["k" + i as string] = i
+        i = i + 1
+    }
+    assert(#m == 2001, "map growth failed")
+    assert(m["k1999"] == 1999, "map lookup after growth failed")
+
+    print("Test 13 (Growable Heap): PASS")
+}

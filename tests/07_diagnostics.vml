@@ -1,0 +1,24 @@
+##[ Test Suite 07: Diagnostics, Warnings, Traces, and Debug Output ]
+
+func helper_callee() {
+    ## Emits warning with caller stack level = 2
+    warn("Callee non-fatal warning", 2)
+}
+
+func main() {
+    ## 1. Assert passing
+    assert(10 > 5, "Assert should pass")
+    assert(true, "Boolean assert should pass")
+
+    ## 2. Non-fatal warning
+    warn("Warning test at level 1", 1)
+
+    ## 3. Stack level reporting
+    helper_callee()
+
+    ## 4. Diagnostic Trace & Debug
+    trace("Trace diagnostic message", 1)
+    debug("Debug diagnostic message", 1)
+
+    print("Test 07 (Diagnostics & Stack Reporting): PASS")
+}

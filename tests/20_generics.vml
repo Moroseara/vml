@@ -1,0 +1,83 @@
+##[ Test Suite 20: generics — inference, type-only parameters (f<T>()), T is X, struct type arguments ]
+
+struct Point {
+    pub x: int
+    pub y: int
+}
+
+func first<T>(xs: T[]): T? {
+    if #xs == 0 { return none }
+    return xs[0]
+}
+
+func larger<T>(a: T, b: T): T {
+    if a > b { return a }
+    return b
+}
+
+func or_default<T>(x: T?, d: T): T {
+    return x ?? d
+}
+
+## No value of T is passed: T itself is the input
+func type_name<T>(): string {
+    if T is int { return "int" }
+    if T is string { return "string" }
+    if T is Point { return "Point" }
+    return "other"
+}
+
+func zero<T>(): T {
+    let v: T
+    return v
+}
+
+## Branches on T are decided at compile time, so each instance only keeps its own branch
+func parse<T>(s: string): T ! string {
+    if T is int { return (s:to_int() ?? 0) as T }
+    throw "cannot parse into this type"
+}
+
+func count_matching<T>(xs: T[], want: T): int {
+    let n = 0
+    for x in xs {
+        if x == want { n += 1 }
+    }
+    return n
+}
+
+func main() {
+    ## 1. inference from arguments
+    assert((first([4, 5]) ?? -1) == 4, "infer T from int[]")
+    let names: string[] = ["ann", "bob"]
+    assert((first(names) ?? "-") == "ann", "infer T from string[]")
+    let empty: string[] = []
+    assert(first(empty) == none, "empty -> none")
+    assert(larger(3, 9) == 9 && larger("a", "b") == "b" && larger(2.5, 1.5) == 2.5, "one template, many types")
+    let missing: int? = none
+    assert(or_default(missing, 7) == 7 && or_default(5, 7) == 5, "infer through T?")
+    assert(count_matching(["a", "b", "a"], "a") == 2, "loop over T[]")
+
+    ## 2. explicit type arguments without values
+    assert(type_name<int>() == "int" && type_name<string>() == "string", "T is X")
+    assert(type_name<Point>() == "Point" && type_name<f64>() == "other", "struct type argument")
+    let p = zero<Point>()
+    assert(p.x == 0 && p.y == 0, "zero value of a struct T")
+    assert(zero<int>() == 0 && zero<string>() == "", "zero values")
+
+    ## 3. generic + errors as values
+    assert((parse<int>("41") catch -1) == 41, "parse<int>")
+    let why = parse<string>("x") catch e { e }
+    assert(why == "cannot parse into this type", "parse<string> throws")
+
+    ## 4. generic lambdas
+    let id = func<T>(x: T): T { return x }
+    assert(id(5) == 5 && id<string>("s") == "s", "generic lambda")
+
+    ## 5. instances are cached: a hot loop calling a generic stays fast
+    let total = 0
+    for i in 1000000 { total += larger(i, 10) }
+    assert(total > 0, "1M generic calls")
+
+    print("Test 20 (Generics): PASS")
+}

@@ -1,0 +1,60 @@
+module std.fmt
+
+import std.math
+
+##[ std.fmt — number formatting helpers ]
+
+## Fixed decimals: fixed(3.14159, 2) == "3.14" (rounds half away from zero)
+pub func fixed(x: f64, digits: int): string {
+    let neg = x < 0.0
+    let v = x
+    if neg { v = -v }
+    let scale = 1
+    for i in 0..digits { scale *= 10 }
+    let n = (v * (scale as f64) + 0.5) as int
+    let whole = n / scale
+    let frac = n % scale
+    let out = f"{whole}"
+    if digits > 0 {
+        let fs = f"{frac}"
+        out = out + "." + fs:pad_left(digits as i32, "0")
+    }
+    if neg && n != 0 { return "-" + out }
+    return out
+}
+
+## Lowercase hexadecimal of a non-negative integer (negative numbers get a '-')
+pub func hex(n: int): string {
+    if n == 0 { return "0" }
+    let digits = "0123456789abcdef"
+    let v = n
+    let neg = v < 0
+    if neg { v = -v }
+    let parts: string[] = []
+    while v > 0 {
+        parts:push(digits:sub((v % 16) as i32, 1))
+        v /= 16
+    }
+    let s = parts:reverse():join("")
+    if neg { return "-" + s }
+    return s
+}
+
+## 1234567 -> "1,234,567"
+pub func thousands(n: int): string {
+    let s = f"{math.abs(n)}"
+    let len = s:len()
+    let out = ""
+    for i in 0..len {
+        if i > 0 && (len - i) % 3 == 0 { out += "," }
+        out += s:sub(i, 1)
+    }
+    if n < 0 { return "-" + out }
+    return out
+}
+
+## pad("x", 4) == "x   ", pad("x", -4) == "   x"
+pub func pad(s: string, width: int): string {
+    if width < 0 { return s:pad_left((-width) as i32) }
+    return s:pad_right(width as i32)
+}

@@ -1,0 +1,2 @@
+module leak.inner
+pub func secret(): int { return 7 }

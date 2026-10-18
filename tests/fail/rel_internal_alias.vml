@@ -1,0 +1,3 @@
+## expect: part of this module cannot use
+import "./fx/part" as p
+func main() { print(1) }

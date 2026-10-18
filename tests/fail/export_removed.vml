@@ -1,0 +1,3 @@
+## expect: 'export' was removed
+import evil.oldexport
+func main() { print(1) }

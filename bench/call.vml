@@ -1,0 +1,7 @@
+func add(a: i32, b: i32): i32 { return a + b }
+func main() {
+    let s: i32 = 0
+    let i: i32 = 0
+    while i < 1000000 { s = add(s, i) i = i + 1 }
+    print(s)
+}

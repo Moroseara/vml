@@ -1,0 +1,155 @@
+module std.string
+
+##[ std.string — methods of every string ("abc":upper(), s:split(",")).
+    Loaded automatically (prelude). Built on intrinsics; everything else is plain .vml. ]
+
+## ---- intrinsics ----
+@[intrinsic("str_len")]       pub func String.len(self): i32
+@[intrinsic("str_upper")]     pub func String.upper(self): string
+@[intrinsic("str_lower")]     pub func String.lower(self): string
+@[intrinsic("str_trim")]      pub func String.trim(self): string
+@[intrinsic("str_sub")]       pub func String.sub(self, start: i32, count: i32): string
+@[intrinsic("str_find")]      pub func String.find(self, needle: string): i32
+@[intrinsic("str_replace")]   pub func String.replace(self, old: string, new: string): string
+@[intrinsic("str_repeat")]    pub func String.repeat(self, n: i32): string
+@[intrinsic("str_byte")]      pub func String.byte(self, i: i32): i32
+@[intrinsic("str_find_from")] pub func String.find_from(self, needle: string, from: i32): i32
+@[intrinsic("str_hash")]      pub func String.hash(self): int
+@[intrinsic("str_cmp")]       pub func String.compare(self, other: string): i32
+@[intrinsic("str_char")]      pub func String.from_byte(b: i32): string
+
+## ---- written in .vml ----
+pub func String.is_empty(self): bool {
+    return self:len() == 0
+}
+
+pub func String.contains(self, needle: string): bool {
+    return self:find(needle) >= 0
+}
+
+pub func String.starts_with(self, prefix: string): bool {
+    let n = prefix:len()
+    if n > self:len() { return false }
+    return self:sub(0, n) == prefix
+}
+
+## Whether `prefix` occurs at byte offset `at`
+pub func String.starts_with_at(self, prefix: string, at: i32): bool {
+    let n = prefix:len()
+    if at < 0 || at + n > self:len() { return false }
+    return self:sub(at, n) == prefix
+}
+
+pub func String.ends_with(self, suffix: string): bool {
+    let n = suffix:len()
+    let len = self:len()
+    if n > len { return false }
+    return self:sub(len - n, n) == suffix
+}
+
+## Number of non-overlapping occurrences
+pub func String.count(self, needle: string): i32 {
+    let n = needle:len()
+    if n == 0 { return 0 }
+    let count: i32 = 0
+    let at = self:find_from(needle, 0)
+    while at >= 0 {
+        count += 1
+        at = self:find_from(needle, at + n)
+    }
+    return count
+}
+
+## "a,b,,c":split(",") -> ["a", "b", "", "c"]; an empty separator splits into bytes
+pub func String.split(self, sep: string): string[] {
+    let out: string[] = []
+    let len = self:len()
+    let n = sep:len()
+    if n == 0 {
+        for i in 0..len { out:push(self:sub(i, 1)) }
+        return out
+    }
+    let start: i32 = 0
+    let at = self:find_from(sep, 0)
+    while at >= 0 {
+        out:push(self:sub(start, at - start))
+        start = at + n
+        at = self:find_from(sep, start)
+    }
+    out:push(self:sub(start, len - start))
+    return out
+}
+
+pub func String.lines(self): string[] {
+    return self:replace("\r\n", "\n"):split("\n")
+}
+
+pub func String.char_at(self, i: i32): string {
+    if i < 0 || i >= self:len() { return "" }
+    return self:sub(i, 1)
+}
+
+pub func String.reverse(self): string {
+    let parts: string[] = []
+    let i = self:len() - 1
+    while i >= 0 {
+        parts:push(self:sub(i, 1))
+        i -= 1
+    }
+    return parts:join("")
+}
+
+pub func String.pad_left(self, width: i32, fill: string = " "): string {
+    let missing = width - self:len()
+    if missing <= 0 || fill:len() == 0 { return self }
+    return fill:repeat(missing):sub(0, missing) + self
+}
+
+pub func String.pad_right(self, width: i32, fill: string = " "): string {
+    let missing = width - self:len()
+    if missing <= 0 || fill:len() == 0 { return self }
+    return self + fill:repeat(missing):sub(0, missing)
+}
+
+pub func String.is_digit(self): bool {
+    let len = self:len()
+    if len == 0 { return false }
+    for i in 0..len {
+        let b = self:byte(i)
+        if b < 48 || b > 57 { return false }
+    }
+    return true
+}
+
+pub func String.is_alpha(self): bool {
+    let len = self:len()
+    if len == 0 { return false }
+    for i in 0..len {
+        let b = self:byte(i)
+        if !((b >= 65 && b <= 90) || (b >= 97 && b <= 122)) { return false }
+    }
+    return true
+}
+
+## Whole-string integer parse: "42" -> 42, "-7" -> -7, anything else -> none
+pub func String.to_int(self): int? {
+    let len = self:len()
+    if len == 0 { return none }
+    let i: i32 = 0
+    let neg = false
+    let first = self:byte(0)
+    if first == 45 || first == 43 {
+        neg = first == 45
+        i = 1
+        if len == 1 { return none }
+    }
+    let n = 0
+    while i < len {
+        let b = self:byte(i)
+        if b < 48 || b > 57 { return none }
+        n = n * 10 + (b - 48)
+        i += 1
+    }
+    if neg { return -n }
+    return n
+}

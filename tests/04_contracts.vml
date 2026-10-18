@@ -1,0 +1,39 @@
+##[ Test Suite 04: Type Contracts, `is` Checking & `as` Casting ]
+
+type Calculator {
+    func calc(self: Self, x: i32): i32
+}
+
+struct Doubler: Calculator {
+    pub scale: i32 = 2
+    pub func calc(self: Self, x: i32): i32 {
+        return x * self.scale
+    }
+}
+
+func apply_calc(c: Calculator, val: i32): i32 {
+    return c:calc(val)
+}
+
+func main() {
+    let d: Doubler
+    assert(d is Calculator, "Struct does not implement Calculator contract")
+
+    let res = apply_calc(d, 21)
+    assert(res == 42, "Contract method dispatch failed")
+
+    ## `as` type casting tests
+    let int_val: i32 = 123
+    let str_from_int: string = int_val as string
+    assert(str_from_int == "123", "i32 as string failed")
+
+    let str_num: string = "456"
+    let int_from_str: i32 = str_num as int
+    assert(int_from_str == 456, "string as int failed")
+
+    let flt: float = 3.8
+    let int_trunc: i32 = flt as int
+    assert(int_trunc == 3, "float as int failed")
+
+    print("Test 04 (Contracts & Casting): PASS")
+}

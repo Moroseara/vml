@@ -1,0 +1,7 @@
+import std.bytes
+
+func main() {
+    let b = Bytes.from_string("Hi")
+    b:push_u16(0x1234)
+    assert(b:to_hex() == "48693412" && b:read_u16(2) == 0x1234, "bytes")
+}

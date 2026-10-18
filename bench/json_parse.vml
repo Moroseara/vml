@@ -1,0 +1,28 @@
+import std.json
+
+func empty_doc(): JsonDoc {
+    let d: JsonDoc
+    return d
+}
+
+func main() {
+    let w = JsonWriter.new()
+    w:begin_array()
+    for i in 400 {
+        w:begin_object()
+        w:key("id") w:int(i as int)
+        w:key("name") w:str(f"item number {i} with a longer text value")
+        w:key("path") w:str("C:\\data\\file.txt")
+        w:key("v") w:num(1.25 as f64)
+        w:key("tags") w:begin_array() w:str("alpha") w:str("beta") w:bool(true) w:null() w:end_array()
+        w:end_object()
+    }
+    w:end_array()
+    let text = w:to_string()
+    let total = 0
+    for k in 20 {
+        let d = json.parse(text) catch e { panic(e); empty_doc() }
+        total += d:len(0)
+    }
+    assert(total == 8000, "json_parse bench")
+}

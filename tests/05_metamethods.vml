@@ -1,0 +1,166 @@
+##[
+  Test Suite 05: Complete Operator Overloading & Lua/Luau Metamethods:
+    - Arithmetic & Unary: `+`, `-` (binary & unary), `*`, `/`, `%`, `+=`
+    - Comparisons: `==`, `!=` (auto-derived from `==`), `<`, `<=`, `>`, `>=`
+    - Length: `operator #` (`#obj` and `len(obj)`)
+    - Indexing: `operator []`, `operator []=`
+    - Callable Struct: `operator ()` (`obj(x)`)
+    - Membership: `operator in` (`x in obj`)
+    - Custom Casting: `operator as` (`obj as int`, `obj as float`, `obj as string`)
+    - Custom Type/Tag Check: `operator is` (`obj is Admin`, `obj is "Admin"`)
+    - Iteration: `operator iter` AND automatic fallback to `operator #` + `operator []`
+]
+
+struct Vector2 {
+    pub x: float = 0.0
+    pub y: float = 0.0
+
+    operator + (a: Self, b: Self): Self {
+        let out: Self
+        out.x = a.x + b.x
+        out.y = a.y + b.y
+        return out
+    }
+
+    operator - (a: Self, b: Self): Self {
+        let out: Self
+        out.x = a.x - b.x
+        out.y = a.y - b.y
+        return out
+    }
+
+    ## Unary negation `-v`
+    operator - (a: Self): Self {
+        let out: Self
+        out.x = -a.x
+        out.y = -a.y
+        return out
+    }
+
+    operator == (a: Self, b: Self): bool {
+        return a.x == b.x && a.y == b.y
+    }
+
+    operator < (a: Self, b: Self): bool {
+        return (a.x + a.y) < (b.x + b.y)
+    }
+
+    operator as (a: Self): int {
+        return (a.x + a.y) as int
+    }
+
+    operator as (a: Self): float {
+        return a.x + a.y
+    }
+
+    operator string (a: Self): string {
+        return f"Vector2({a.x}, {a.y})"
+    }
+
+    ## Callable struct `v(scale)`
+    operator () (a: Self, factor: float): float {
+        return (a.x + a.y) * factor
+    }
+
+    ## Custom runtime `is` check (`v is Normalized` or `v is "Origin"`)
+    operator is (a: Self, tag: string): bool {
+        if tag == "Origin" {
+            return a.x == 0.0 && a.y == 0.0
+        }
+        return false
+    }
+}
+
+## Fixed 3-element IntList using `operator #` and `operator []` (automatic `for` loop fallback!)
+struct IntList3 {
+    pub v0: i32 = 10
+    pub v1: i32 = 20
+    pub v2: i32 = 30
+
+    operator # (self: Self): i32 {
+        return 3
+    }
+
+    operator [] (self: Self, idx: i32): i32 {
+        if idx == 0 { return self.v0 }
+        if idx == 1 { return self.v1 }
+        return self.v2
+    }
+
+    operator []= (self: Self, idx: i32, val: i32): Self {
+        if idx == 0 { self.v0 = val }
+        else if idx == 1 { self.v1 = val }
+        else { self.v2 = val }
+        return self
+    }
+
+    operator in (self: Self, target: i32): bool {
+        return self.v0 == target || self.v1 == target || self.v2 == target
+    }
+}
+
+## Custom generator struct using `operator iter` (`__iter`)
+struct RangeStep {
+    pub start_v: i32 = 100
+    pub count: i32 = 4
+
+    operator iter (self: Self, idx: i32): (bool, i32) {
+        if idx >= self.count {
+            return false, 0
+        }
+        return true, self.start_v + idx * 5
+    }
+}
+
+func main() {
+    let v1: Vector2
+    v1.x = 10.0
+    v1.y = 20.0
+
+    let v2: Vector2
+    v2.x = 5.0
+    v2.y = 15.0
+
+    ## 1. Arithmetic, Unary `-`, Compound `+=`, Comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+    let v3 = v1 + v2
+    assert(v3.x == 15.0 && v3.y == 35.0, "operator + failed")
+    let neg_v = -v2
+    assert(neg_v.x == -5.0 && neg_v.y == -15.0, "unary operator - failed")
+    v1 += v2
+    assert(v1 == v3 && v1 != v2, "compound += or == / != failed")
+    assert(v2 < v3 && v3 > v2 && v2 <= v3 && v3 >= v2, "derived comparison operators failed")
+
+    ## 2. `operator as` (int, float, string) & `operator ()` (__call) & `operator is`
+    assert((v3 as int) == 50, "operator as int failed")
+    assert((v3 as float) == 50.0, "operator as float failed")
+    assert((v3 as string) == "Vector2(15, 35)", "operator string failed")
+    assert(v3(2.0) == 100.0, "operator () callable struct failed")
+
+    let zero_v: Vector2
+    assert(zero_v is Origin, "operator is identifier tag failed")
+    assert(zero_v is "Origin", "operator is string tag failed")
+    assert(!(v3 is Origin), "operator is false case failed")
+
+    ## 3. `operator #`, `operator []`, `operator []=`, `operator in`, and `for` loop fallback
+    let list: IntList3
+    list[1] = 25
+    assert(#list == 3 && len(list) == 3, "#list length operator failed")
+    assert(25 in list && !(99 in list), "operator in failed")
+
+    let list_sum: i32 = 0
+    for x in list {
+        list_sum += x
+    }
+    assert(list_sum == 65, "for loop over struct with operator # and operator [] failed")
+
+    ## 4. `operator iter` custom iterator in `for` loop (1-var and 2-var `i, val`)
+    let gen: RangeStep
+    let iter_sum: i32 = 0
+    for idx, val in gen {
+        iter_sum += val + idx
+    }
+    ## val: 100 + 105 + 110 + 115 = 430, idx: 0 + 1 + 2 + 3 = 6 -> 436
+    assert(iter_sum == 436, "for loop with operator iter failed")
+
+    print("Test 05 (Metamethods & Operators): PASS")
+}

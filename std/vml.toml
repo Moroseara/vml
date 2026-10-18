@@ -1,0 +1,7 @@
+# The standard library. It is built into the vml binary (tools/embed_std.c), so `import std.x`
+# always uses the copy inside the running vml: after editing std/, rebuild vml (make) before `vml test`.
+[project]
+name    = "std"
+builtin = true          # only the built-in std may use the name "std"
+version = "0.1.0"
+source  = "."           # modules are folders right here: json/mod.vml -> std.json

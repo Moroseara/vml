@@ -1,0 +1,96 @@
+## 12_error_handling.vml - catch, try..or, defer & Task Error Isolation
+import std.task {*}
+import std.debug {*}
+
+func safe_div(a: int, b: int): int {
+    assert(b != 0, "division by zero");
+    return a / b;
+}
+
+func deep_step_2(x: int): int {
+    if (x < 0) {
+        error("negative input not allowed");
+    }
+    return x * 10;
+}
+
+func deep_step_1(x: int): int {
+    return deep_step_2(x) + 1;
+}
+
+func custom_err_handler(msg: string): int {
+    print("handler caught: " + msg);
+    return -999;
+}
+
+func test_defer_order(): int {
+    let acc: int = 1;
+    defer { print("defer 1 (runs last)"); }
+    defer { print("defer 2 (runs first)"); }
+    {
+        defer print("inner block defer (runs at block exit)");
+        acc = acc + 10;
+    }
+    print("before return in test_defer_order");
+    return acc;
+}
+
+func risky_fiber(x: int): int {
+    if (x == 0) {
+        error("fiber exploded");
+    }
+    return x * 5;
+}
+
+func main() {
+    print("=== 1. catch traps runtime errors (replaces pcall) ===");
+    let val1 = safe_div(20, 4) catch -1;
+    assert(val1 == 5, "safe_div(20, 4) should succeed");
+    print(f"catch ok: val1: {val1}");
+
+    let val2 = safe_div(20, 0) catch -1;
+    assert(val2 == -1, "catch should trap division by zero");
+    print(f"catch fallback: {val2}, caught error: {debug.last_error()}");
+
+    let val3 = deep_step_1(-5) catch e {
+        assert("negative input" in e, "catch binds the error message");
+        print("nested catch caught: " + e);
+        -7
+    };
+    assert(val3 == -7, "catch should unwind multiple frames");
+
+    print("=== 2. catch with a handler block (replaces xpcall) ===");
+    let xval = deep_step_1(-10) catch msg { custom_err_handler(msg) };
+    assert(xval == -999, "handler block should return -999");
+    print(f"handler result: {xval}");
+
+    print("=== 3. Inline 'try ... or ...' (Zero-Lambda Recovery) ===");
+    let r1: int = try safe_div(50, 2) or -1;
+    let r2: int = try safe_div(50, 0) or -1;
+    assert(r1 == 25, "try safe_div(50, 2) should be 25");
+    assert(r2 == -1, "try safe_div(50, 0) should fallback to -1");
+    print(f"try..or inline: r1={r1}, r2={r2}");
+
+    let r3: int = try deep_step_1(-1) or err {
+        print("try..or block caught: " + err);
+        => -42;
+    };
+    assert(r3 == -42, "try..or block should evaluate to -42");
+    print(f"try..or block result: {r3}");
+
+    print("=== 4. 'defer' LIFO Scope-Exit Cleanup ===");
+    let dval: int = test_defer_order();
+    assert(dval == 11, "test_defer_order should return 11");
+
+    print("=== 5. Task Error Isolation (std.task) ===");
+    let t_good: int = task.spawn(risky_fiber, 8);
+    let t_bad: int = task.spawn(risky_fiber, 0);
+    assert(task.ok(t_good) == true, "t_good should succeed");
+    assert(task.result(t_good) == 40, "t_good result should be 40");
+    assert(task.ok(t_bad) == false, "t_bad should not be ok");
+    assert(task.status(t_bad) == "errored", "t_bad status should be 'errored'");
+    assert(task.error(t_bad) == "fiber exploded", "t_bad error message should match");
+    print("Task isolation -> t_bad status: " + task.status(t_bad) + ", error: " + task.error(t_bad));
+
+    print("12_error_handling: ALL PASSED");
+}

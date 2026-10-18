@@ -1,0 +1,3 @@
+## expect: Duplicate function overload
+import evil.override
+func main() { print("a":upper()) }

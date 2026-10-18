@@ -1,0 +1,5 @@
+module my.split
+
+import "./split_impl"
+
+pub func answer(): int { return base() + 2 }

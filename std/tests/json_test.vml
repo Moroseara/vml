@@ -1,0 +1,16 @@
+import std.json
+
+func empty_doc(): JsonDoc {
+    let d: JsonDoc
+    return d
+}
+
+func main() {
+    let doc = json.parse("{\"a\": [1, 2, {\"b\": \"x\\ny\"}], \"ok\": true}") catch e { assert(false, e); empty_doc() }
+    assert(doc:len(doc:root()) == 2, "members")
+    assert((doc:str(doc:find("a.2.b") ?? 0) ?? "") == "x\ny", "find + escape")
+    assert(doc:to_string() == "{\"a\":[1,2,{\"b\":\"x\\ny\"}],\"ok\":true}", "round trip")
+    let w = JsonWriter.new()
+    w:begin_array() w:int(1) w:str("q") w:end_array()
+    assert(w:to_string() == "[1,\"q\"]", "writer")
+}

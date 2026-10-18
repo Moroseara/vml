@@ -1,0 +1,99 @@
+import std.string
+import std.bit
+import std.io
+import std.math
+
+##[ Represents a 2D Point vector in space ]
+struct Point {
+    pub x: float = 0.0
+    pub y: float = 0.0
+
+    ##[ Computes the squared magnitude of the point ]
+    pub func mag_sq(self: Self): float {
+        return self.x * self.x + self.y * self.y
+    }
+}
+
+##[ Computes the factorial of n recursively ]
+func fact_global(n: i32): i32 {
+    if n <= 1 { return 1 }
+    return n * fact_global(n - 1)
+}
+
+func test_nested_functions() {
+    io.println("--- Testing Nested Functions & Self-Recursion ---")
+
+    ##[ Inner recursive factorial ]
+    func fact_inner(n: i32): i32 {
+        if n <= 1 { return 1 }
+        return n * fact_inner(n - 1)
+    }
+
+    ##[ Inner recursive fibonacci ]
+    func fib_inner(n: i32): i32 {
+        if n <= 1 { return n }
+        return fib_inner(n - 1) + fib_inner(n - 2)
+    }
+
+    let f5 = fact_inner(5)
+    let fib7 = fib_inner(7)
+    io.println(f"fact_inner(5) = {f5}")
+    io.println(f"fib_inner(7) = {fib7}")
+    assert(f5 == 120, "Nested factorial failed")
+    assert(fib7 == 13, "Nested fibonacci failed")
+}
+
+func test_string_methods() {
+    io.println("--- Testing Unified String Primitive Methods ---")
+    let s: string = "hello world"
+    let u: string = s:upper()
+    let l: string = u:lower()
+    let sub: string = s:sub(0, 5)
+    let sz: i32 = #s
+
+    io.println(f"original: {s}")
+    io.println(f"upper:    {u}")
+    io.println(f"lower:    {l}")
+    io.println(f"sub(0,5): {sub}")
+    io.println(f"#len:     {sz}")
+
+    assert(sz == 11, "String length failed")
+    assert(u == "HELLO WORLD", "String upper failed")
+    assert(l == "hello world", "String lower failed")
+    assert(sub == "hello", "String sub failed")
+
+    ## Literal method calls & format
+    let lit_u = "test":upper()
+    let lit_len = #"quick"
+    let fmt_s = "item={}, qty={}":format("Sword", 3)
+    assert(lit_u == "TEST", "Literal upper failed")
+    assert(lit_len == 5, "Literal #len failed")
+    assert(fmt_s == "item=Sword, qty=3", "Literal :format failed")
+}
+
+func test_std_bit() {
+    io.println("--- Testing std.bit Library ---")
+    let a: i32 = 12 ## 1100
+    let b: i32 = 10 ## 1010
+    let c_and = bit.band(a, b) ## 8 (1000)
+    let c_or = bit.bor(a, b)   ## 14 (1110)
+    let c_xor = bit.bxor(a, b) ## 6 (0110)
+    let c_shl = bit.shl(1, 4)  ## 16
+    let c_shr = bit.shr(16, 2) ## 4
+    let ones = bit.count_ones(15) ## 4
+
+    assert(c_and == 8, "band failed")
+    assert(c_or == 14, "bor failed")
+    assert(c_xor == 6, "bxor failed")
+    assert(c_shl == 16, "shl failed")
+    assert(c_shr == 4, "shr failed")
+    assert(ones == 4, "count_ones failed")
+}
+
+func main() {
+    io.println("=== Starting Comprehensive New Features Verification ===")
+    test_nested_functions()
+    test_string_methods()
+    test_std_bit()
+    io.println("=== All New Features Verified Successfully! ===")
+}

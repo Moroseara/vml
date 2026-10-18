@@ -1,0 +1,17 @@
+module std.debug
+
+##[ std.debug — VM introspection ]
+
+@[intrinsic("vm_gc")]            pub func gc()
+@[intrinsic("vm_gc_count")]      pub func gc_count(): i32
+@[intrinsic("vm_live_arrays")]   pub func live_arrays(): i32
+@[intrinsic("vm_live_strings")]  pub func live_strings(): i32
+@[intrinsic("vm_func_count")]    pub func func_count(): i32
+@[intrinsic("vm_bytecode_size")] pub func bytecode_size(): i32
+@[intrinsic("vm_string_count")]  pub func string_count(): i32
+@[intrinsic("vm_arena_used")]    pub func arena_used(): i32
+@[intrinsic("vm_array_count")]   pub func array_count(): i32
+@[intrinsic("vm_map_count")]     pub func map_count(): i32
+@[intrinsic("vm_func_name")]     pub func func_name(fid: i32): string
+@[intrinsic("vm_traceback")]     pub func traceback(): string
+@[intrinsic("vm_last_error")]    pub func last_error(): string

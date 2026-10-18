@@ -1,0 +1,5 @@
+module my.util
+
+pub const K: i32 = 7
+func helper(): i32 { return 1 }
+pub func twice(x: i32): i32 { return x * 2 + helper() - 1 }

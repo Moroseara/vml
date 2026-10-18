@@ -1,0 +1,46 @@
+##[ Test Suite 03: Structs, Field Defaults, Methods, and Multiple Inheritance ]
+
+struct BaseA {
+    pub a: i32 = 100
+    pub func get_a(self: Self): i32 {
+        return self.a
+    }
+}
+
+struct BaseB {
+    pub b: float = 20.5
+    pub func get_b(self: Self): float {
+        return self.b
+    }
+}
+
+## Multiple inheritance from BaseA and BaseB
+struct Child: BaseA, BaseB {
+    pub c: string = "hello"
+    pub func get_all_sum(self: Self): float {
+        return (self.a as float) + self.b
+    }
+}
+
+func main() {
+    let obj: Child
+    assert(obj.a == 100, "BaseA field default failed")
+    assert(obj.b == 20.5, "BaseB field default failed")
+    assert(obj.c == "hello", "Child field default failed")
+
+    ## Inherited methods
+    let va = obj:get_a()
+    let vb = obj:get_b()
+    let vsum = obj:get_all_sum()
+
+    assert(va == 100, "Inherited get_a failed")
+    assert(vb == 20.5, "Inherited get_b failed")
+    assert(vsum == 120.5, "Sub-struct offset sum failed")
+
+    ## Mutate inherited field
+    obj.a = 250
+    obj.a += 50
+    assert(obj:get_a() == 300, "Mutated inherited field failed")
+
+    print("Test 03 (Structs & Inheritance): PASS")
+}

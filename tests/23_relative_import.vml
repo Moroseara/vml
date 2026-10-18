@@ -1,0 +1,11 @@
+##[ Test Suite 23: import "./path" — internal files and other modules by relative path ]
+import "./rel/shapes"   ## part of this program
+import "./rel/shapes.vml"   ## same file again: loaded once
+import "./rel/geo/geo" as g   ## another module, renamed
+
+func main() {
+    assert(square_area(3) == 9 && unit_area() == 1, "internal file shares everything")
+    assert(g.double(4) == 8 && g.triple(2) == 6, "relative module through its handle")
+    assert(g.ORIGIN == 0, "pub const from the module's internal file")
+    print("Test 23 (Relative import): PASS")
+}

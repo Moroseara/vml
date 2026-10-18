@@ -1,0 +1,96 @@
+##[ Test Suite 16: Call Syntax (command calls, named arguments, trailing blocks, call groups) ]
+
+
+func record(log: string[], msg: string) {
+    log:push(msg)
+}
+
+func area(w: i32 = 1, h: i32 = 1): i32 {
+    return w * h
+}
+
+func repeat(n: i32, body: (): void) {
+    for i in n { body() }
+}
+
+func each_index(n: i32, body: (i: i32): void) {
+    for i in n { body(i) }
+}
+
+func map_value(v: i32, f: (x: i32): i32): i32 {
+    return f(v)
+}
+
+func make_greeter(prefix: string): (name: string): string {
+    return func(name: string): string { return prefix + name }
+}
+
+func greeting_for(times: i32, word: string): (): string {
+    return func(): string {
+        let s = ""
+        for i in times { s += word }
+        return s
+    }
+}
+
+struct Panel {
+    pub title: string = "panel"
+    pub items: i32 = 0
+}
+
+func button(log: string[], label: string, on_click: (): void) {
+    log:push("button:" + label)
+    on_click()
+}
+
+func main() {
+    let log: string[] = []
+
+    ## 1. Command calls: no parentheses at statement start
+    record log, "first"
+    record(log, "second")
+    assert(#log == 2 && log[0] == "first" && log[1] == "second", "command call")
+    print "command print works"
+
+    ## 2. Named arguments (any order, defaults fill the rest)
+    assert(area { w = 3, h = 4 } == 12, "named args")
+    assert(area { h = 5, w = 2 } == 10, "named args in any order")
+    assert(area { h = 7 } == 7, "named arg with default for the other")
+
+    ## 3. Trailing blocks become the last (callback) argument
+    let count: i32 = 0
+    repeat(3) { count += 1 }
+    assert(count == 3, "trailing block without params")
+    repeat 2 { count += 10 }
+    assert(count == 23, "command call + trailing block")
+
+    ## 4. Block parameters take their types from the callback type
+    let sum: i32 = 0
+    each_index(4) { i -> sum += i }
+    assert(sum == 6, "block param i")
+    assert(map_value(5) { x -> x * 2 } == 10, "block's last expression is its value")
+
+    ## 5. Call groups: `f(a)(b)`, `f a ()`, named group then ()
+    assert(make_greeter("Hi ")("Ann") == "Hi Ann", "f(a)(b)")
+    let hello = make_greeter("Hello ")
+    assert(hello("Bo") == "Hello Bo", "returned closure")
+    assert(greeting_for(3, "ab")() == "ababab", "f(a, b)()")
+    assert(greeting_for { times = 2, word = "x" } () == "xx", "named group then call group")
+
+    ## 6. DSL style: nested command calls with trailing blocks
+    let clicks: i32 = 0
+    button log, "Save" { clicks += 1 }
+    button log, "Load" {
+        clicks += 100
+    }
+    assert(clicks == 101, "DSL callbacks ran")
+    assert(log[2] == "button:Save" && log[3] == "button:Load", "DSL calls in order")
+
+    ## 7. Existing syntax is unchanged
+    let p: Panel
+    if p.items == 0 { p.items = 1 }
+    while p.items < 3 { p.items += 1 }
+    assert(p.items == 3, "if/while bodies are still blocks, not trailing closures")
+
+    print("Test 16 (Call Syntax): PASS")
+}

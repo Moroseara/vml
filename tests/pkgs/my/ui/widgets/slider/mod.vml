@@ -1,0 +1,4 @@
+module my.ui.widgets.slider
+
+import "./track"
+pub func label(): string { return "slider/" + track() }

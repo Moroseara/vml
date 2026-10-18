@@ -1,0 +1,7 @@
+import std.math
+import std.fmt
+
+func main() {
+    assert(math.gcd(84, 36) == 12 && math.pow(2, 10) == 1024, "math")
+    assert(fmt.thousands(1234567) == "1,234,567", "fmt uses math across modules")
+}

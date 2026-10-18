@@ -1,0 +1,46 @@
+##[ Test Suite 15: Garbage Collector (arrays, maps, strings, cells, closures) ]
+import std.debug
+
+func make_adder(n: i32): (x: i32): i32 {
+    return func(x: i32): i32 { return x + n }
+}
+
+func store_strings(xs: string[], i: i32) {
+    xs:push("kept-" + i as string)
+}
+
+func main() {
+    ## Survivors: nested containers and closures that stay reachable
+    let keep: string[] = []
+    let grid: int[] = [1, 2, 3]
+    let table = {"a": 1}
+    let add7 = make_adder(7)
+
+    let i: i32 = 0
+    while i < 20000 {
+        ## Garbage every iteration: arrays, maps, strings, closures
+        let tmp: int[] = [i, i + 1, i + 2]
+        let m = {"k": i}
+        let s = "temp-" + i as string
+        let f = make_adder(i)
+        if i % 5000 == 0 { store_strings(keep, i) }
+        table["x" + (i % 10) as string] = f(1)
+        i = i + 1
+    }
+
+    debug.gc()
+    let j: i32 = 0
+    while j < 2 { j = j + 1 }
+
+    assert(debug.gc_count() >= 1, "collector never ran")
+    assert(debug.live_arrays() < 100, "temporary arrays were not freed")
+    assert(debug.live_strings() < 2000, "temporary strings were not freed")
+
+    assert(#keep == 4, "kept array length")
+    assert(keep[0] == "kept-0" && keep[3] == "kept-15000", "strings stored by a callee survive")
+    assert(grid[2] == 3, "array survives")
+    assert(table["a"] == 1 && table["x9"] == 20000, "map survives with updated values")
+    assert(add7(1) == 8, "closure and its captured cell survive")
+
+    print("Test 15 (Garbage Collector): PASS")
+}

@@ -1,0 +1,3 @@
+## Part of the program that imports it (no `module` line): shares everything with it
+func unit_area(): int { return 1 }
+func square_area(n: int): int { return n * n * unit_area() }

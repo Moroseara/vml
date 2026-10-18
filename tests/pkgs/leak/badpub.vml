@@ -1,0 +1,3 @@
+module leak.badpub
+pub import "./badpub_part"
+pub func v(): int { return 1 }

@@ -1,0 +1,137 @@
+module std.bytes
+
+##[ std.bytes — byte buffers: binary data, hex, little-endian integers.
+    `let b = Bytes.from_string("hi")`, `b:push_u32(7)`, `b:to_hex()`. Copies of a Bytes share the same storage. ]
+
+pub struct Bytes {
+    pub data: i32[]
+}
+
+@[intrinsic("str_to_bytes")] func raw_from_string(s: string): i32[]
+@[intrinsic("bytes_to_str")] func raw_to_string(a: i32[]): string
+
+pub func Bytes.new(): Bytes {
+    let out: Bytes
+    let d: i32[] = []
+    out.data = d
+    return out
+}
+
+pub func Bytes.from_string(s: string): Bytes {
+    let out: Bytes
+    out.data = raw_from_string(s)
+    return out
+}
+
+func hex_digit(c: i32): i32 {
+    if c >= 48 && c <= 57 { return c - 48 }
+    if c >= 97 && c <= 102 { return c - 87 }
+    if c >= 65 && c <= 70 { return c - 55 }
+    return -1
+}
+
+## "48690a" -> [0x48, 0x69, 0x0a]
+pub func Bytes.from_hex(s: string): Bytes ! string {
+    let n = s:len()
+    if n % 2 != 0 { throw "hex string has an odd length" }
+    let out = Bytes.new()
+    let i: i32 = 0
+    while i < n {
+        let hi = hex_digit(s:byte(i))
+        let lo = hex_digit(s:byte(i + 1))
+        if hi < 0 || lo < 0 { throw f"invalid hex digit at {i}" }
+        out:push(hi * 16 + lo)
+        i += 2
+    }
+    return out
+}
+
+pub func Bytes.len(self: Bytes): i32 {
+    return self.data:len()
+}
+
+pub func Bytes.get(self: Bytes, i: i32): i32 {
+    let d: i32[] = self.data
+    return d[i]
+}
+
+pub func Bytes.set(self: Bytes, i: i32, v: i32) {
+    let d: i32[] = self.data
+    d[i] = v & 255
+}
+
+pub func Bytes.push(self: Bytes, v: i32) {
+    let d: i32[] = self.data
+    d:push(v & 255)
+}
+
+pub func Bytes.append(self: Bytes, other: Bytes) {
+    let d: i32[] = self.data
+    let o: i32[] = other.data
+    for x in o { d:push(x) }
+}
+
+pub func Bytes.slice(self: Bytes, start: i32, count: i32): Bytes {
+    let out = Bytes.new()
+    let d: i32[] = self.data
+    let n = d:len()
+    let i = start
+    if i < 0 { i = 0 }
+    let stop = start + count
+    if stop > n { stop = n }
+    while i < stop {
+        out:push(d[i])
+        i += 1
+    }
+    return out
+}
+
+pub func Bytes.equals(self: Bytes, other: Bytes): bool {
+    let a: i32[] = self.data
+    let b: i32[] = other.data
+    if a:len() != b:len() { return false }
+    for i, x in a {
+        if x != b[i] { return false }
+    }
+    return true
+}
+
+pub func Bytes.to_string(self: Bytes): string {
+    return raw_to_string(self.data)
+}
+
+pub func Bytes.to_hex(self: Bytes): string {
+    let digits = "0123456789abcdef"
+    let parts: string[] = []
+    let d: i32[] = self.data
+    for x in d {
+        parts:push(digits:sub(x >> 4, 1))
+        parts:push(digits:sub(x & 15, 1))
+    }
+    return parts:join("")
+}
+
+## ---- little-endian integers ----
+pub func Bytes.push_u16(self: Bytes, v: i32) {
+    self:push(v & 255)
+    self:push((v >> 8) & 255)
+}
+
+pub func Bytes.push_u32(self: Bytes, v: int) {
+    self:push((v & 255) as i32)
+    self:push(((v >> 8) & 255) as i32)
+    self:push(((v >> 16) & 255) as i32)
+    self:push(((v >> 24) & 255) as i32)
+}
+
+pub func Bytes.read_u16(self: Bytes, off: i32): i32 {
+    return self:get(off) | (self:get(off + 1) << 8)
+}
+
+pub func Bytes.read_u32(self: Bytes, off: i32): int {
+    let b0 = self:get(off) as int
+    let b1 = self:get(off + 1) as int
+    let b2 = self:get(off + 2) as int
+    let b3 = self:get(off + 3) as int
+    return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
+}

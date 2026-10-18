@@ -1,0 +1,3 @@
+## expect: outside the package
+import "../../SPEC"
+func main() { print(1) }

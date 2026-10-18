@@ -1,0 +1,111 @@
+## std.json internal file: JsonWriter
+
+## ---- writing ----
+pub struct JsonWriter {
+    pub parts: string[]
+    pub first: bool[]
+    pub state: i32[]
+}
+
+pub func JsonWriter.new(): JsonWriter {
+    let w: JsonWriter
+    let parts: string[] = []
+    let first: bool[] = []
+    let state: i32[] = [0]
+    w.parts = parts
+    w.first = first
+    w.state = state
+    return w
+}
+
+## Separator before a value (after a key nothing; inside a container a comma after the first item)
+func before_value(w: JsonWriter) {
+    let state: i32[] = w.state
+    let parts: string[] = w.parts
+    let first: bool[] = w.first
+    if state[0] == 1 {
+        state[0] = 0
+        return
+    }
+    let depth = first:len()
+    if depth > 0 {
+        if first[depth - 1] {
+            first[depth - 1] = false
+        } else {
+            parts:push(",")
+        }
+    }
+}
+
+pub func JsonWriter.key(self: JsonWriter, k: string) {
+    before_value(self)
+    let parts: string[] = self.parts
+    parts:push(quote(k) + ":")
+    let state: i32[] = self.state
+    state[0] = 1
+}
+
+pub func JsonWriter.begin_object(self: JsonWriter) {
+    before_value(self)
+    let parts: string[] = self.parts
+    let first: bool[] = self.first
+    parts:push("{")
+    first:push(true)
+}
+
+pub func JsonWriter.end_object(self: JsonWriter) {
+    let parts: string[] = self.parts
+    let first: bool[] = self.first
+    first:pop()
+    parts:push("}")
+}
+
+pub func JsonWriter.begin_array(self: JsonWriter) {
+    before_value(self)
+    let parts: string[] = self.parts
+    let first: bool[] = self.first
+    parts:push("[")
+    first:push(true)
+}
+
+pub func JsonWriter.end_array(self: JsonWriter) {
+    let parts: string[] = self.parts
+    let first: bool[] = self.first
+    first:pop()
+    parts:push("]")
+}
+
+pub func JsonWriter.str(self: JsonWriter, v: string) {
+    before_value(self)
+    let parts: string[] = self.parts
+    parts:push(quote(v))
+}
+
+pub func JsonWriter.num(self: JsonWriter, v: f64) {
+    before_value(self)
+    let parts: string[] = self.parts
+    parts:push(number_text(v))
+}
+
+pub func JsonWriter.int(self: JsonWriter, v: int) {
+    before_value(self)
+    let parts: string[] = self.parts
+    parts:push(f"{v}")
+}
+
+pub func JsonWriter.bool(self: JsonWriter, v: bool) {
+    before_value(self)
+    let parts: string[] = self.parts
+    if v { parts:push("true") } else { parts:push("false") }
+}
+
+pub func JsonWriter.null(self: JsonWriter) {
+    before_value(self)
+    let parts: string[] = self.parts
+    parts:push("null")
+}
+
+pub func JsonWriter.to_string(self: JsonWriter): string {
+    let parts: string[] = self.parts
+    return parts:join("")
+}

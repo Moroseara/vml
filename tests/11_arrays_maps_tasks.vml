@@ -1,0 +1,121 @@
+import std.io
+import std.task
+import std.debug
+import std.time
+
+## User-extensible primitive structs:
+## Re-opening `struct String` or `struct Array` adds methods directly to `""` and `[]`!
+struct String {
+    pub func bracket(self): string {
+        return f"[{self}]"
+    }
+}
+
+struct Array {
+    pub func sum_first_two(self): int {
+        return self:get(0) + self:get(1)
+    }
+}
+
+func compute_fib(): int {
+    let a = 0
+    let b = 1
+    for i in 10 {
+        let next = a + b
+        a = b
+        b = next
+    }
+    return a
+}
+
+func main() {
+    ## 1. Unified Native Primitive `String` (single source of truth in `vm/stdlib/std_string.c`)
+    let greeting = "  hello world  ":trim():upper()
+    assert(greeting == "HELLO WORLD")
+    assert(greeting:starts_with("HELLO") == true)
+    assert(greeting:ends_with("WORLD") == true)
+    assert("ha":repeat(3) == "hahaha")
+    assert("User={} Score={}":format("Alice", 99) == "User=Alice Score=99")
+    assert(String.format("HP={}/{}", 85, 100) == "HP=85/100")
+    assert("core":bracket() == "[core]")
+
+    ## 2. First-Class `Array` (`[10, 20, 30]`, `arr[i]`, `arr[i] = v`, `#arr`, `in`, `for`, `:method()`)
+    let nums: int[] = [10, 20, 30]
+    assert(#nums == 3)
+    assert(nums:len() == 3)
+    assert(nums[0] == 10)
+    assert(nums[2] == 30)
+
+    nums[1] = 25
+    assert(nums[1] == 25)
+    nums:push(40)
+    assert(#nums == 4)
+    assert(25 in nums)
+    assert((99 in nums) == false)
+    assert(nums:sum_first_two() == 35)
+    assert(nums:join("-") == "10-25-30-40")
+
+    let popped = nums:pop()
+    assert(popped == 40)
+    assert(#nums == 3)
+
+    let total = 0
+    for idx, val in nums {
+        total += val + idx
+    }
+    ## (10+0) + (25+1) + (30+2) = 68
+    assert(total == 68)
+
+    nums:reverse()
+    assert(nums[0] == 30)
+    assert(nums[2] == 10)
+
+    ## 3. First-Class `Map` (`{"k": v}`, `{:}`, `m["k"]`, `m["k"] = v`, `#m`, `in`, `for k, v in m`)
+    let stats = {"hp": 100, "mp": 50}
+    assert(#stats == 2)
+    assert(stats["hp"] == 100)
+    assert("mp" in stats)
+    assert(("stamina" in stats) == false)
+
+    stats["hp"] = 120
+    stats:set("atk", 35)
+    assert(#stats == 3)
+    assert(stats:get("hp") == 120)
+    assert(stats["atk"] == 35)
+
+    let sum_stats = 0
+    for k, v in stats {
+        if k != "" {
+            sum_stats += v
+        }
+    }
+    assert(sum_stats == 205)
+
+    let removed = stats:remove("mp")
+    assert(removed == true)
+    assert(#stats == 2)
+    assert(stats:has("mp") == false)
+
+    ## 4. `std.task` (Cooperative Fiber Scheduler: spawn / defer / delay / step / status / result)
+    let t1 = task.spawn(compute_fib)
+    assert(task.status(t1) == "completed")
+    assert(task.result(t1) == 55)
+
+    let t2 = task.defer(func(): int {
+        return 777
+    })
+    assert(task.status(t2) == "deferred")
+    let ran = task.step()
+    assert(ran >= 1)
+    assert(task.status(t2) == "completed")
+    assert(task.result(t2) == 777)
+
+    ## 5. `std.debug` & `std.time`
+    assert(debug.func_count() > 10)
+    assert(debug.bytecode_size() > 50)
+    assert(debug.array_count() >= 1)
+    assert(debug.map_count() >= 1)
+    assert(time.now_ns() > 0)
+
+    io.println("Test 11 (Arrays, Maps, Tasks & Unified Primitives): PASS")
+}

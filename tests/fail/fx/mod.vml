@@ -1,0 +1,4 @@
+module fxmod
+
+import "./mod_part"
+pub func run(): int { return hidden() }

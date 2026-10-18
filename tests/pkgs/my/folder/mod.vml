@@ -1,0 +1,5 @@
+module my.folder
+
+import "./impl"
+
+pub func name(): string { return "folder:" + inner() }

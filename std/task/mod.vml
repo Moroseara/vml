@@ -1,0 +1,14 @@
+module std.task
+
+##[ std.task — run functions as isolated tasks (an error inside a task does not stop the program).
+    The scheduler is part of the VM; fiber-based tasks with yield come with SPEC step 8. ]
+
+@[intrinsic("task_spawn")]  pub func spawn(f: i32, arg: int = 0): i32
+@[intrinsic("task_defer")]  pub func defer(f: i32, arg: int = 0): i32
+@[intrinsic("task_delay")]  pub func delay(ms: i32, f: i32, arg: int = 0): i32
+@[intrinsic("task_cancel")] pub func cancel(id: i32): bool
+@[intrinsic("task_step")]   pub func step(): i32
+@[intrinsic("task_status")] pub func status(id: i32): string
+@[intrinsic("task_result")] pub func result(id: i32): i32
+@[intrinsic("task_error")]  pub func error(id: i32): string
+@[intrinsic("task_ok")]     pub func ok(id: i32): bool

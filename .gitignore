@@ -1,0 +1,12 @@
+# build outputs
+/vml
+/embed_host
+/build/
+*.dSYM/
+*.o
+*.a
+# project caches
+.vml-cache/
+dist/
+# macOS
+.DS_Store

@@ -1,0 +1,9 @@
+func main() {
+    let x: float = 0.0
+    let i: i32 = 0
+    while i < 1000000 {
+        x = x + 1.5
+        i = i + 1
+    }
+    print(x)
+}

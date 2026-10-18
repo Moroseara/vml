@@ -1,0 +1,35 @@
+module std.fs
+
+##[ std.fs — files. Every failure is an error value: `let text = fs.read("a.txt")?`
+    The host decides whether scripts may import it (VM_FEAT_STD_FS). ]
+
+@[intrinsic("fs_read")]   func raw_read(path: string): string
+@[intrinsic("fs_write")]  func raw_write(path: string, data: string): bool
+@[intrinsic("fs_append")] func raw_append(path: string, data: string): bool
+@[intrinsic("fs_remove")] func raw_remove(path: string): bool
+@[intrinsic("fs_error")]  func raw_error(): string
+@[intrinsic("fs_exists")] pub func exists(path: string): bool
+
+pub func read(path: string): string ! string {
+    let text = raw_read(path)
+    let err = raw_error()
+    if err != "" { throw err + ": " + path }
+    return text
+}
+
+pub func read_lines(path: string): string[] ! string {
+    let text = read(path)?
+    return text:lines()
+}
+
+pub func write(path: string, data: string): void ! string {
+    if !raw_write(path, data) { throw raw_error() + ": " + path }
+}
+
+pub func append(path: string, data: string): void ! string {
+    if !raw_append(path, data) { throw raw_error() + ": " + path }
+}
+
+pub func remove(path: string): void ! string {
+    if !raw_remove(path) { throw raw_error() + ": " + path }
+}

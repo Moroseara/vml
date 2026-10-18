@@ -1,0 +1,4 @@
+## expect: is declared with 'type func' here, but its body has different parameter types
+type func scale(x: int): int
+func main() { print(1) }
+func scale(x: f64): int { return 1 }

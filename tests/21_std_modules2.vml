@@ -1,0 +1,170 @@
+##[ Test Suite 21: std modules moved to .vml — bytes, json, map, env, os, io, debug, task, coroutine ]
+import std.bytes
+import std.json
+import std.env
+import std.os
+import std.io
+import std.debug
+import std.task
+import std.coroutine
+
+func double_it(x: int): int { return x * 2 }
+
+func empty_doc(): JsonDoc {
+    let d: JsonDoc
+    return d
+}
+
+func parse_ok(s: string): JsonDoc {
+    return json.parse(s) catch e { assert(false, "parse failed: " + e); empty_doc() }
+}
+
+## Error text of a failing parse ("" when it parsed)
+func parse_err(s: string): string {
+    let msg = ""
+    let d = json.parse(s) catch e { msg = e; empty_doc() }
+    return msg
+}
+
+func hex_err(s: string): string {
+    let msg = ""
+    let b = Bytes.from_hex(s) catch e { msg = e; Bytes.new() }
+    return msg
+}
+
+func main() {
+    ## 1. bytes
+    let b = Bytes.from_string("Hi")
+    assert(b:len() == 2 && b:get(0) == 72 && b:get(1) == 105, "from_string")
+    b:push(300)
+    assert(b:get(2) == 44, "push masks to a byte")
+    b:set(2, 33)
+    assert(b:to_string() == "Hi!", "to_string round trip")
+    assert(b:to_hex() == "486921", "to_hex")
+    let h = Bytes.from_hex("486921") catch e { Bytes.new() }
+    assert(h:equals(b), "from_hex == from_string")
+    let mixed = Bytes.from_hex("ABcd") catch e { Bytes.new() }
+    assert(mixed:to_hex() == "abcd", "hex digits both cases")
+    assert(hex_err("abc") == "hex string has an odd length", "odd hex is an error")
+    assert(hex_err("0z") == "invalid hex digit at 0" && hex_err("00g0") == "invalid hex digit at 2", "bad hex digit")
+    assert(hex_err("") == "", "empty hex")
+    let alias = b
+    alias:push(0)
+    assert(b:len() == 4, "copies share storage")
+    assert(!b:equals(h) && !b:equals(Bytes.from_string("Hi!?")), "equals checks length and content")
+    let sl = b:slice(1, 2)
+    assert(sl:to_string() == "i!" && b:slice(3, 99):len() == 1 && b:slice(-5, 6):len() == 1, "slice clamps")
+    let c = Bytes.new()
+    c:append(sl)
+    c:append(sl)
+    assert(c:to_string() == "i!i!", "append")
+    let le = Bytes.new()
+    le:push_u16(0x1234)
+    le:push_u32(0xDEADBEEF)
+    assert(le:to_hex() == "3412efbeadde", "little-endian push")
+    assert(le:read_u16(0) == 0x1234 && le:read_u32(2) == 0xDEADBEEF, "little-endian read")
+
+    ## 2. json parse
+    let text = "{\"name\": \"vm\", \"ver\": 1.5, \"n\": -3, \"ok\": true, \"off\": false, \"nil\": null,\n \"tags\": [\"a\", \"b\\n\", \"\\u00e9\\u0041\"], \"server\": {\"ports\": [80, 443e0]}, \"e\": {}, \"ea\": []}"
+    let doc = parse_ok(text)
+    let r = doc:root()
+    assert(doc:kind(r) == json.OBJECT && doc:kind_name(r) == "object" && doc:len(r) == 10, "root object")
+    assert((doc:get_str(r, "name") ?? "") == "vm", "get_str")
+    assert((doc:get_num(r, "ver") ?? 0.0) == 1.5, "get_num")
+    assert((doc:get_int(r, "n") ?? 0) == -3, "negative int")
+    assert((doc:get_bool(r, "ok") ?? false) && !(doc:get_bool(r, "off") ?? true), "bools")
+    assert(doc:is_null(doc:get(r, "nil") ?? 0) && doc:get(r, "missing") == none, "null / missing")
+    assert(doc:get_str(r, "ver") == none && doc:get_num(r, "name") == none, "wrong kind -> none")
+    let tags = doc:get(r, "tags") ?? 0
+    assert(doc:len(tags) == 3 && (doc:str(doc:at(tags, 1) ?? 0) ?? "") == "b\n", "array + escape")
+    assert((doc:str(doc:at(tags, 2) ?? 0) ?? "") == "\xc3\xa9A", "\\u escapes to utf-8")
+    assert(doc:at(tags, 3) == none && doc:at(tags, -1) == none, "at out of range")
+    assert((doc:int(doc:find("server.ports.1") ?? 0) ?? 0) == 443, "find path through array")
+    assert(doc:find("server.ports.7") == none && doc:find("server.nope") == none && (doc:find("") ?? -1) == 0, "find misses")
+    assert(doc:len(doc:get(r, "e") ?? 0) == 0 && doc:len(doc:get(r, "ea") ?? 0) == 0, "empty containers")
+    assert(doc:key(doc:first_child(r)) == "name" && doc:next_sibling(doc:get(r, "ea") ?? 0) == -1, "links")
+    assert(doc:to_string(tags) == "[\"a\",\"b\\n\",\"\xc3\xa9A\"]", "to_string array")
+    assert(doc:to_string(doc:get(r, "server") ?? 0) == "{\"ports\":[80,443]}", "to_string object")
+    let again = parse_ok(doc:to_string())
+    assert(again:to_string() == doc:to_string() && again:len(0) == 10, "re-parse is stable")
+
+    ## 3. json errors are values
+    let bads = ["", "{", "[1,]", "{\"a\" 1}", "\"abc", "tru", "[1] x", "{1:2}", "\"\\u12g4\"", "\"a\x01\""]
+    for src in bads {
+        assert(parse_err(src) != "", "error expected: " + src)
+    }
+    assert(parse_err("[1 2]") == "expected ',' or ']' at 3", "error position")
+    assert(parse_err("") == "unexpected end of JSON" && parse_err("\"abc") == "unterminated string", "error text")
+    assert(parse_err("[1] x") == "unexpected text after JSON at 3", "trailing text")
+    assert(parse_err("[":repeat(130) + "]":repeat(130)) == "JSON nested too deeply", "depth limit")
+    assert(parse_err("[":repeat(129) + "]":repeat(129)) == "", "deep but allowed")
+    assert(parse_err(" \t\r\n 7 \n") == "", "whitespace around a scalar")
+
+    ## 4. json writer + quote
+    assert(json.quote("a\"b\\c\n\t\x01") == "\"a\\\"b\\\\c\\n\\t\\u0001\"", "quote escapes")
+    let w = JsonWriter.new()
+    w:begin_object()
+    w:key("s") w:str("x")
+    w:key("i") w:int(-7)
+    w:key("f") w:num(2.5 as f64)
+    w:key("w") w:num(3.0 as f64)
+    w:key("a")
+    w:begin_array() w:bool(true) w:bool(false) w:null() w:begin_object() w:end_object() w:end_array()
+    w:end_object()
+    let out = w:to_string()
+    assert(out == "{\"s\":\"x\",\"i\":-7,\"f\":2.5,\"w\":3,\"a\":[true,false,null,{}]}", "writer output")
+    let back = parse_ok(out)
+    assert(back:to_string() == out, "writer output parses back")
+
+    ## 5. map (prelude)
+    let m = Map.new()
+    assert(m:is_empty() && m:len() == 0, "new map empty")
+    m:set("a", 1)
+    m:set("b", 2)
+    assert(m:len() == 2 && m:has("a") && !m:has("z") && m:get("b") == 2, "set/has/get")
+    assert(m:keys():len() == 2 && m:key_at(0) != "", "keys / key_at")
+    assert(m:remove("a") && !m:remove("a") && m:len() == 1, "remove")
+    m:clear()
+    assert(m:is_empty(), "clear")
+
+    ## 6. env / os / io
+    assert(env.has("PATH") && (env.get("PATH") ?? "") != "", "env PATH")
+    assert(env.get("VML_SURELY_UNSET_VAR_21") == none && !env.has("VML_SURELY_UNSET_VAR_21"), "env missing")
+    assert(os.platform() != "" && os.arch() != "", "os info")
+    assert(os.time() > 1600000000 && os.clock() > 0.0, "os clock")
+    io.write("")
+
+    ## 7. debug
+    let before = debug.gc_count()
+    debug.gc()
+    assert(debug.gc_count() == before + 1, "gc runs on demand")
+    assert(debug.func_count() > 0 && debug.bytecode_size() > 0 && debug.string_count() > 0, "vm stats")
+    assert(debug.live_arrays() >= 0 && debug.live_strings() >= 0, "live counts")
+
+    ## 8. task / coroutine
+    let t = task.spawn(double_it, 21)
+    assert(task.ok(t) && task.status(t) == "completed" && task.result(t) == 42, "task spawn")
+    let d = task.defer(double_it, 5)
+    assert(task.status(d) == "deferred" && task.step() >= 1 && task.result(d) == 10, "task defer")
+    let x = task.defer(double_it, 1)
+    assert(task.cancel(x) && task.status(x) != "completed", "task cancel")
+    let co = Coroutine.create()
+    assert(Coroutine.resume(co) == 2 && Coroutine.resume(co, 5) == 6, "coroutine placeholder")
+
+    ## 9. json speed: parse a ~2k-node document 50 times
+    let big = JsonWriter.new()
+    big:begin_array()
+    for i in 500 {
+        big:begin_object() big:key("id") big:int(i as int) big:key("name") big:str(f"item {i}") big:key("v") big:num(1.25 as f64) big:end_object()
+    }
+    big:end_array()
+    let bt = big:to_string()
+    let total = 0
+    for k in 50 {
+        let bd = parse_ok(bt)
+        total += bd:len(0)
+    }
+    assert(total == 25000, "json hot parse")
+
+    print("Test 21 (std modules in .vml): PASS")
+}

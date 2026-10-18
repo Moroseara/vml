@@ -1,0 +1,59 @@
+##[ Test Suite 09: C-Registered Standard Libraries (`std.math`, `std.random`, `std.io`, `std.string`, `std.bit`) ]
+
+import std.math
+import std.random
+import std.io
+import std.coroutine
+import std.string
+import std.bit
+
+func main() {
+    ## 1. std.math
+    let s0 = math.sin(0.0)
+    assert(s0 == 0.0, "math.sin(0.0) failed")
+    let m_abs = math.abs(-42)
+    assert(m_abs == 42, "math.abs failed")
+    let m_clamp = math.clamp(150, 0, 100)
+    assert(m_clamp == 100, "math.clamp failed")
+    let m_pow = math.pow(2, 8)
+    assert(m_pow == 256, "math.pow failed")
+
+    ## 2. std.random
+    let r1 = random.next(12345)
+    let r2 = random.range(12345, 10, 50)
+    assert(r1 > 0, "random.next failed")
+    assert(r2 >= 10 && r2 <= 50, "random.range failed")
+
+    ## 3. std.string & unified String methods
+    let str_val = "Antigravity VM"
+    let slen = String.len(str_val)
+    let sup = String.upper(str_val)
+    let slow = String.lower(sup)
+    assert(slen == 14 && #str_val == 14, "String.len failed")
+    assert(sup == "ANTIGRAVITY VM", "String.upper failed")
+    assert(slow == "antigravity vm", "String.lower failed")
+    assert(String.is_empty("") == true, "String.is_empty failed")
+    assert(String.format("Hello {}, v={}", "VM", 2) == "Hello VM, v=2", "String.format failed")
+
+    ## 4. std.bit
+    let band_res = bit.band(15, 7)
+    let bor_res = bit.bor(8, 4)
+    let bxor_res = bit.bxor(15, 10)
+    let shl_res = bit.shl(2, 3)
+    let shr_res = bit.shr(16, 2)
+    let ones = bit.count_ones(7) ## 3
+    assert(band_res == 7, "bit.band failed")
+    assert(bor_res == 12, "bit.bor failed")
+    assert(bxor_res == 5, "bit.bxor failed")
+    assert(shl_res == 16, "bit.shl failed")
+    assert(shr_res == 4, "bit.shr failed")
+    assert(ones == 3, "bit.count_ones failed")
+
+    ## 5. std.io & coroutine
+    io.println("Testing std.io printing")
+    let co = Coroutine.create(1)
+    let step2 = Coroutine.resume(co, 5)
+    assert(step2 == 6, "Coroutine.resume failed")
+
+    print("Test 09 (Standard Libraries): PASS")
+}

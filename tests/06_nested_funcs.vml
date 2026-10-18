@@ -1,0 +1,42 @@
+##[ Test Suite 06: Nested Functions, Recursive Self-Calls & Scoping ]
+
+func outer_scope_test(seed: i32): i32 {
+    let multiplier: i32 = 10
+
+    ## Nested function capturing outer variable `multiplier`
+    func inner_calc(val: i32): i32 {
+        return val * multiplier
+    }
+
+    ## Recursive nested function
+    func nested_fact(n: i32): i32 {
+        if n <= 1 { return 1 }
+        return n * nested_fact(n - 1)
+    }
+
+    let a = inner_calc(seed)
+    let b = nested_fact(5)
+    return a + b
+}
+
+func another_scope_with_same_nested_name(x: i32): i32 {
+    ## Another nested function with identical name `nested_fact` - must not collide!
+    func nested_fact(n: i32): i32 {
+        return n * 100
+    }
+    return nested_fact(x)
+}
+
+func main() {
+    let r1 = outer_scope_test(5)
+    ## inner_calc(5) = 5 * 10 = 50
+    ## nested_fact(5) = 120
+    ## total = 170
+    assert(r1 == 170, "Nested function with outer capture & recursion failed")
+
+    ## Verify no collision with same name nested in different function
+    let r2 = another_scope_with_same_nested_name(3)
+    assert(r2 == 300, "Nested function name collision occurred")
+
+    print("Test 06 (Nested Functions & Recursion): PASS")
+}

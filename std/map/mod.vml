@@ -1,0 +1,26 @@
+module std.map
+
+##[ std.map — methods of every map (m:has("k"), m:keys()). Loaded automatically (prelude). ]
+
+@[intrinsic("map_len")]    pub func Map.len(self): i32
+@[intrinsic("map_has")]    pub func Map.has(self, key: string): bool
+@[intrinsic("map_get")]    pub func Map.get(self, key: string): i32
+@[intrinsic("map_remove")] pub func Map.remove(self, key: string): bool
+@[intrinsic("map_key_at")] pub func Map.key_at(self, i: i32): string
+@[intrinsic("map_clear")]  pub func Map.clear(self)
+@[intrinsic("map_keys")]   pub func Map.keys(self): string[]
+@[intrinsic("map_set")]    pub func Map.set(self, key: string, v: int)
+@[intrinsic("map_set")]    pub func Map.set(self, key: string, v: i32)
+@[intrinsic("map_set")]    pub func Map.set(self, key: string, v: f32)
+@[intrinsic("map_set")]    pub func Map.set(self, key: string, v: f64)
+@[intrinsic("map_set")]    pub func Map.set(self, key: string, v: string)
+@[intrinsic("map_set")]    pub func Map.set(self, key: string, v: bool)
+
+pub func Map.new(): map {
+    let m: {string: int} = {}
+    return m
+}
+
+pub func Map.is_empty(self): bool {
+    return self:len() == 0
+}

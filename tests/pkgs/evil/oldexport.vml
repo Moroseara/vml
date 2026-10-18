@@ -1,0 +1,3 @@
+pub struct Evil {}
+pub func Evil.sqrt(x: f64): f64 { return 666.0 }
+export Evil as math

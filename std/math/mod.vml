@@ -1,0 +1,99 @@
+module std.math
+
+##[ std.math — `import std.math` then math.sqrt(2.0), math.abs(-3) ]
+
+pub const PI: f32 = 3.14159265
+pub const TAU: f32 = 6.2831853
+pub const E: f32 = 2.7182818
+
+## ---- intrinsics ----
+@[intrinsic("sqrt32")]  pub func sqrt(x: f32): f32
+@[intrinsic("floor32")] pub func floor(x: f32): f32
+@[intrinsic("ceil32")]  pub func ceil(x: f32): f32
+@[intrinsic("sin32")]   pub func sin(x: f32): f32
+@[intrinsic("cos32")]   pub func cos(x: f32): f32
+@[intrinsic("sqrt64")]  pub func sqrt(x: f64): f64
+@[intrinsic("floor64")] pub func floor(x: f64): f64
+@[intrinsic("ceil64")]  pub func ceil(x: f64): f64
+@[intrinsic("sin64")]   pub func sin(x: f64): f64
+@[intrinsic("cos64")]   pub func cos(x: f64): f64
+
+## ---- written in .vml ----
+pub func abs(x: int): int { if x < 0 { return -x } return x }
+pub func abs(x: i32): i32 { if x < 0 { return -x } return x }
+pub func abs(x: f32): f32 { if x < 0.0 { return -x } return x }
+pub func abs(x: f64): f64 { if x < 0.0 { return -x } return x }
+
+pub func min(a: int, b: int): int { if a < b { return a } return b }
+pub func min(a: i32, b: i32): i32 { if a < b { return a } return b }
+pub func min(a: f32, b: f32): f32 { if a < b { return a } return b }
+pub func min(a: f64, b: f64): f64 { if a < b { return a } return b }
+
+pub func max(a: int, b: int): int { if a > b { return a } return b }
+pub func max(a: i32, b: i32): i32 { if a > b { return a } return b }
+pub func max(a: f32, b: f32): f32 { if a > b { return a } return b }
+pub func max(a: f64, b: f64): f64 { if a > b { return a } return b }
+
+pub func clamp(x: int, lo: int, hi: int): int { if x < lo { return lo } if x > hi { return hi } return x }
+pub func clamp(x: i32, lo: i32, hi: i32): i32 { if x < lo { return lo } if x > hi { return hi } return x }
+pub func clamp(x: f32, lo: f32, hi: f32): f32 { if x < lo { return lo } if x > hi { return hi } return x }
+pub func clamp(x: f64, lo: f64, hi: f64): f64 { if x < lo { return lo } if x > hi { return hi } return x }
+
+pub func sign(x: int): int { if x > 0 { return 1 } if x < 0 { return -1 } return 0 }
+pub func sign(x: f64): f64 { if x > 0.0 { return 1.0 } if x < 0.0 { return -1.0 } return 0.0 }
+
+## Integer power by squaring (exp < 0 gives 0)
+pub func pow(base: int, exp: int): int {
+    if exp < 0 { return 0 }
+    let result = 1
+    let b = base
+    let e = exp
+    while e > 0 {
+        if e % 2 == 1 { result *= b }
+        b *= b
+        e /= 2
+    }
+    return result
+}
+
+pub func pow(base: i32, exp: i32): i32 {
+    let r: i32 = 1
+    for i in 0..exp { r *= base }
+    return r
+}
+
+pub func pow(base: f32, exp: i32): f32 {
+    let r: f32 = 1.0
+    for i in 0..exp { r *= base }
+    return r
+}
+
+pub func pow(base: f64, exp: int): f64 {
+    let r: f64 = 1.0
+    let b = base
+    let e = exp
+    if e < 0 {
+        b = 1.0 / b
+        e = -e
+    }
+    while e > 0 {
+        if e % 2 == 1 { r *= b }
+        b *= b
+        e /= 2
+    }
+    return r
+}
+
+pub func lerp(a: f32, b: f32, t: f32): f32 { return a + (b - a) * t }
+pub func lerp(a: f64, b: f64, t: f64): f64 { return a + (b - a) * t }
+
+pub func gcd(a: int, b: int): int {
+    let x = abs(a)
+    let y = abs(b)
+    while y != 0 {
+        let t = x % y
+        x = y
+        y = t
+    }
+    return x
+}

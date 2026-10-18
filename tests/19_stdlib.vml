@@ -1,0 +1,90 @@
+##[ Test Suite 19: standard library written in .vml on intrinsics ]
+import std.math
+import std.fmt
+import std.fs
+import std.time
+import std.random
+
+func main() {
+    ## 1. string methods (prelude, no import)
+    let s = "  Hello, VM World  "
+    assert(s:trim() == "Hello, VM World", "trim")
+    assert(s:trim():upper() == "HELLO, VM WORLD" && "ABC":lower() == "abc", "case")
+    assert("banana":count("an") == 2 && "aaa":count("") == 0, "count")
+    let parts = "a,b,,c":split(",")
+    assert(#parts == 4 && parts[2] == "" && parts[3] == "c", "split keeps empty fields")
+    assert("xyz":split(""):join("-") == "x-y-z", "split into bytes")
+    assert("l1\r\nl2\nl3":lines():len() == 3, "lines")
+    assert("hello":starts_with("he") && !"hello":starts_with("lo") && "hello":ends_with("llo"), "prefix/suffix")
+    assert("hello":contains("ell") && !"hello":contains("xyz"), "contains")
+    assert("abc":reverse() == "cba" && "abc":char_at(1) == "b" && "abc":char_at(9) == "", "reverse / char_at")
+    assert("7":pad_left(3, "0") == "007" && "ab":pad_right(4, ".") == "ab.." && "long":pad_left(2) == "long", "pad")
+    assert("ab":repeat(3) == "ababab" && "x":repeat(0) == "", "repeat")
+    assert("A":byte(0) == 65 && "A":byte(5) == -1 && String.from_byte(66) == "B", "bytes")
+    assert("hello":find_from("l", 3) == 3 && "hello":find_from("z", 0) == -1, "find_from")
+    assert("abc":compare("abd") < 0 && "b":compare("a") > 0 && "x":compare("x") == 0, "compare")
+    assert("abc":hash() == "abc":hash() && "abc":hash() != "abd":hash(), "hash")
+    assert("123":is_digit() && !"12a":is_digit() && "Ab":is_alpha() && !"A1":is_alpha(), "classes")
+    assert(("-42":to_int() ?? 0) == -42 && "4x":to_int() == none && "":to_int() == none, "to_int")
+    assert(String.upper("q") == "Q", "type-qualified string method")
+
+    ## 2. array methods
+    let xs: int[] = [5, 3, 9]
+    assert(xs:len() == 3 && xs:index_of(9) == 2 && xs:index_of(4) == -1, "index_of")
+    assert(xs:contains(3) && !xs:contains(4), "contains int")
+    assert(xs:sum() == 17, "sum")
+    xs:reverse()
+    assert(xs[0] == 9 && xs[2] == 5, "reverse in place")
+    assert(xs:join("/") == "9/3/5", "join")
+    let names: string[] = ["ann", "bob"]
+    assert(names:contains("bob") && names:index_of("ann") == 0, "string arrays")
+    names:clear()
+    assert(names:is_empty(), "clear")
+
+    ## 3. math
+    assert(math.abs(-42) == 42 && math.abs(-2.5) == 2.5, "abs")
+    assert(math.min(3, 7) == 3 && math.max(3, 7) == 7 && math.clamp(150, 0, 100) == 100, "min/max/clamp")
+    assert(math.pow(2, 10) == 1024 && math.pow(3, 0) == 1, "int pow")
+    let half: f64 = 0.5
+    assert(math.pow(2.0 as f64, -1) == half, "float pow with negative exponent")
+    assert(math.gcd(84, 36) == 12 && math.sign(-9) == -1, "gcd / sign")
+    let two: f64 = 2.0
+    let r = math.sqrt(two)
+    assert(r > 1.41421 && r < 1.41422, "f64 sqrt")
+    assert(math.floor(2.7) == 2.0 && math.ceil(2.1) == 3.0, "floor / ceil")
+    let s1 = math.sin(1.0 as f64)
+    assert(s1 > 0.84147 && s1 < 0.84148, "f64 sin")
+    assert(math.PI > 3.14 && math.PI < 3.15, "constants")
+
+    ## 4. fmt
+    assert(fmt.fixed(3.14159, 2) == "3.14" && fmt.fixed(2.0, 0) == "2" && fmt.fixed(-1.005, 1) == "-1.0", "fixed")
+    assert(fmt.hex(255) == "ff" && fmt.hex(0) == "0", "hex")
+    assert(fmt.thousands(1234567) == "1,234,567" && fmt.thousands(999) == "999", "thousands")
+
+    ## 5. fs (errors are values)
+    let path = "/tmp/vml_test19.txt"
+    fs.write(path, "alpha\nbeta") catch e { assert(false, "write should work") }
+    fs.append(path, "\ngamma") catch e { assert(false, "append should work") }
+    let lines = fs.read_lines(path) catch e { [] }
+    assert(#lines == 3 && lines[2] == "gamma", "read_lines")
+    assert(fs.exists(path), "exists")
+    fs.remove(path) catch e { assert(false, "remove should work") }
+    assert(!fs.exists(path), "removed")
+    let missing = fs.read(path) catch e { "ERR " + e }
+    assert(missing:starts_with("ERR cannot read file"), "read error is a value")
+
+    ## 6. time / random
+    let t0 = time.now_ns()
+    assert(time.since(t0) >= 0.0 && time.unix() > 1600000000, "time")
+    let rv = random.range(12345, 10, 50)
+    assert(rv >= 10 && rv < 50 && random.next(1) == random.next(1), "random")
+
+    ## 7. stdlib speed: 1M string method calls
+    let n = 0
+    for i in 1000000 {
+        if "hello world":starts_with("hello") { n += 1 }
+    }
+    assert(n == 1000000, "hot starts_with loop")
+
+    print("Test 19 (Stdlib in .vml): PASS")
+}

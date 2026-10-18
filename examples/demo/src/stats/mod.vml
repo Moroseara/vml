@@ -1,0 +1,14 @@
+module demo.stats
+
+import "./format"          ## internal file: shares this module's private helpers
+import mathx.stats as ms   ## workspace dependency
+import std.json
+
+pub func report(xs: int[]): string {
+    return render(xs:len() as int, ms.mean(xs))
+}
+
+pub func empty_doc(): JsonDoc {
+    let d: JsonDoc
+    return d
+}

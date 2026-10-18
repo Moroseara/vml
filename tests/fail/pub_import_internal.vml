@@ -1,0 +1,3 @@
+## expect: 'pub import' of a file that is part of this module
+import leak.badpub
+func main() { print(badpub.v()) }

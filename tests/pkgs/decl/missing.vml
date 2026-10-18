@@ -1,0 +1,4 @@
+module decl.missing
+
+type func area(w: int, h: int): int
+pub func f(): int { return 1 }

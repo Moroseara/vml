@@ -1,0 +1,7 @@
+[project]
+name    = "demo"
+version = "0.1.0"
+entry   = "src/main.vml"
+
+[deps]
+mathx = { workspace = true }     # path comes from [workspace.deps] in the root vml.toml

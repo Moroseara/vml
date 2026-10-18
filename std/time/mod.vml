@@ -1,0 +1,19 @@
+module std.time
+
+##[ std.time — monotonic clock and wall time ]
+
+@[intrinsic("clock_ns")]  pub func now_ns(): int
+@[intrinsic("unix_time")] pub func unix(): int
+
+pub func now_ms(): f64 {
+    return (now_ns() as f64) / 1000000.0
+}
+
+pub func now_sec(): f64 {
+    return (now_ns() as f64) / 1000000000.0
+}
+
+## Seconds elapsed since a now_ns() reading
+pub func since(start_ns: int): f64 {
+    return ((now_ns() - start_ns) as f64) / 1000000000.0
+}

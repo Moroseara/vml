@@ -1,0 +1,11 @@
+array_push_get 0.0136
+call 0.0154
+fib 0.0254
+float_add 0.0058
+for_range 0.0038
+loop_mod 0.0186
+map_get_set 0.0189
+string_build 0.0395
+compile_25501_lines 0.0158
+parse_ast_102001_lines 0.0283
+json_parse 0.0351

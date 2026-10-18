@@ -1,0 +1,90 @@
+##[ Test Suite 17: int = i64, optional types (T?), enums with payloads, match expressions ]
+
+enum Shape {
+    Circle(r: float),
+    Rect(w: float, h: float),
+    Empty
+}
+
+enum Level { Low, Mid = 10, High }
+
+func area(s: Shape): float {
+    return match s {
+        Circle(r) => 3.0 * r * r,
+        Rect(w, h) => w * h,
+        Empty => 0.0
+    }
+}
+
+func find_index(xs: string[], want: string): int? {
+    for i, x in xs {
+        if x == want { return i }
+    }
+    return none
+}
+
+func greet(name: string?): string {
+    return "hi " + (name ?? "stranger")
+}
+
+func main() {
+    ## 1. int is 64-bit; i32 stays 32-bit
+    let big = 3000000000
+    assert(big * 2 == 6000000000, "int is i64")
+    let sum = 0
+    for i in 100000 { sum += i }
+    assert(sum == 4999950000, "int loop sum past 2^31")
+    let small: i32 = 2147483647
+    assert(small + 1 == -2147483648, "i32 still wraps")
+    let mixed = #"abcd" + big
+    assert(mixed == 3000000004, "i32 length widened into int")
+    let nums: int[] = [-5, 10]
+    assert(nums[0] + nums[1] == 5, "negative ints in int arrays")
+
+    ## 2. Optionals
+    let names: string[] = ["ann", "bob"]
+    let a = find_index(names, "bob")
+    let b = find_index(names, "zed")
+    assert((a ?? -1) == 1 && (b ?? -1) == -1, "?? fallback")
+    assert(a != none && b == none, "compare with none")
+    let found = 0
+    if let i = a { found = i + 100 }
+    assert(found == 101, "if let binds the value")
+    let missing = 0
+    if let i = b { missing = 1 } else { missing = 2 }
+    assert(missing == 2, "if let else on none")
+    assert(greet("ann") == "hi ann" && greet(none) == "hi stranger", "T and none passed for T?")
+    let nick: string? = none
+    assert((nick?.upper() ?? "-") == "-", "?. on none")
+    nick = "dee"
+    assert((nick?.upper() ?? "-") == "DEE" && (nick?.len ?? 0) == 3, "?. on a value")
+    assert(f"{nick} / {b}" == "dee / none", "optionals in f-strings")
+
+    ## 3. Enums and match
+    assert(area(Shape.Circle(2.0)) == 12.0, "circle")
+    assert(area(Shape.Rect(3.0, 4.0)) == 12.0, "rect payload with two values")
+    assert(area(Shape.Empty) == 0.0, "variant without payload")
+    assert(Shape.Rect(1.0, 1.0) == Shape.Rect(2.0, 2.0), "enum equality compares variants")
+    assert(Shape.Empty != Shape.Circle(1.0), "different variants")
+    assert(Level.High as int == 11 && Level.Low as int == 0, "explicit tag values")
+    assert(Level.Mid as string == "Level.Mid", "enum to string")
+    let n = 3
+    let word = match n {
+        1 => "one",
+        3 => "three",
+        _ => "many"
+    }
+    assert(word == "three", "match expression on int")
+    let lvl = Level.Mid
+    let score = match lvl {
+        Level.Low => 1,
+        Level.Mid => {
+            let base = 20
+            base + 2
+        },
+        Level.High => 3
+    }
+    assert(score == 22, "match arm block value")
+
+    print("Test 17 (Types: int, T?, enum, match): PASS")
+}

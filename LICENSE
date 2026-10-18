@@ -1,0 +1,36 @@
+================================================================================
+VMLANG CUSTOM SOURCE-AVAILABLE & ANTI-PLAGIARISM LICENSE
+Copyright (c) 2026 VMLang Project Authors. All Rights Reserved.
+================================================================================
+
+1. GRANT OF PERMISSION (SOURCE-AVAILABLE USE & MODIFICATION)
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software, virtual machine kernel, bytecode compiler, and associated files
+(the "Software"), to view, study, execute, embed, and modify the Software for
+personal, educational, research, or internal project use, subject to the
+strict conditions in Section 2.
+
+2. STRICT PROHIBITIONS (NON-PLAGIARISM & NON-REBRANDING)
+You may NOT, under any circumstances:
+  (a) Claim authorship or ownership of the Software, its register-based VM
+      architecture, or its language design as your own original work;
+  (b) Remove, alter, or obscure any copyright notices, license headers, or
+      attribution to the original VMLang authors;
+  (c) Fork, clone, copy, or redistribute the Software (in whole or in
+      substantial part, whether modified or unmodified) under a different
+      name, brand, or language identity as a competing or standalone language,
+      compiler, or virtual machine project;
+  (d) Sell, sublicense, or commercially redistribute the Software itself as a
+      standalone SDK, compiler, or virtual machine product without prior
+      written permission from the copyright holders.
+
+3. EMBEDDING IN APPLICATIONS
+You are permitted to embed the compiled Virtual Machine binary into your own
+applications or games, provided that clear attribution to VMLang is included
+in the documentation or credits of your application, and you do not rebrand
+the scripting language or claim the VM engine as your own creation.
+
+4. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.

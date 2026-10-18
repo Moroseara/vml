@@ -1,0 +1,3 @@
+## expect: cannot find ./fx/nope
+import "./fx/nope"
+func main() { print(1) }

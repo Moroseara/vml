@@ -1,0 +1,6 @@
+module geo
+
+import "./geo_parts"   ## internal: sees geo_parts' private helpers
+
+pub func double(x: int): int { return scale(x, 2) }
+pub func triple(x: int): int { return scale(x, 3) }

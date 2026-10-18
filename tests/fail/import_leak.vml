@@ -1,0 +1,3 @@
+## expect: Module leak.inner is not imported here
+import leak.outer
+func main() { print(inner.secret()) }

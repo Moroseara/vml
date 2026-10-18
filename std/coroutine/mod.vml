@@ -1,0 +1,17 @@
+module std.coroutine
+
+##[ std.coroutine — step counter placeholder until fiber coroutines land (SPEC step 8) ]
+
+pub struct Coroutine {
+    pub step_id: i32
+}
+
+pub func Coroutine.create(initial_step: i32 = 1): Coroutine {
+    let c: Coroutine
+    c.step_id = initial_step
+    return c
+}
+
+pub func Coroutine.resume(co: Coroutine, delta: i32 = 1): i32 {
+    return co.step_id + delta
+}

@@ -1,0 +1,146 @@
+##[ Test Suite 18: errors as values (T ! E), throw, ?, catch ]
+
+enum ParseError { Empty, BadChar(at: int) }
+
+struct IoError {
+    pub code: int,
+    pub message: string
+}
+
+func parse_digit(s: string): int ! ParseError {
+    if #s == 0 { throw ParseError.Empty }
+    let d = "0123456789":find(s)
+    if #s != 1 || d < 0 { throw ParseError.BadChar(0) }
+    return d
+}
+
+## `?` passes the error on; `return v` wraps the value
+func add_digits(a: string, b: string): int ! ParseError {
+    let x = parse_digit(a)?
+    let y = parse_digit(b)?
+    return x + y
+}
+
+func open_file(name: string): string ! IoError {
+    if name == "" {
+        let e: IoError
+        e.code = 2
+        e.message = "no name"
+        throw e
+    }
+    return "data:" + name
+}
+
+func read_len(name: string): int ! IoError {
+    let text = open_file(name)?
+    return #text
+}
+
+## void results: only success or failure
+func check(n: int, seen: int[]): void ! string {
+    if n < 0 { throw f"negative: {n}" }
+    seen:push(n)
+    return
+}
+
+func check_all(xs: int[], seen: int[]): void ! string {
+    for x in xs { check(x, seen)? }
+}
+
+struct Acct {
+    pub bal: int
+
+    pub func take(self: Self, n: int): int ! string {
+        if n > self.bal { throw "insufficient" }
+        return self.bal - n
+    }
+}
+
+func describe(e: ParseError): string {
+    return match e {
+        Empty => "empty",
+        BadChar(at) => f"bad char at {at}"
+    }
+}
+
+func panic_at(x: int): int {
+    if x > 0 { panic("boom") }
+    return x
+}
+
+func main() {
+    ## 1. catch with a default value
+    assert((parse_digit("7") catch -1) == 7, "ok value passes through catch")
+    assert((parse_digit("x") catch -1) == -1, "catch default on error")
+    assert((parse_digit("") catch -2) == -2, "catch default on Empty")
+
+    ## 2. ? propagation through several frames
+    assert((add_digits("3", "4") catch -1) == 7, "? unwraps values")
+    assert((add_digits("3", "z") catch -1) == -1, "? returns the error")
+
+    ## 3. catch binding with a block; the error is a full enum value
+    let msg = ""
+    let v = add_digits("", "1") catch e {
+        msg = describe(e)
+        0
+    }
+    assert(v == 0 && msg == "empty", "catch block binds an enum error")
+    let w = parse_digit("q") catch e {
+        let d = describe(e)
+        #d
+    }
+    assert(w == 13, "payload of the error is available")
+
+    ## 4. struct errors and string values
+    let n = read_len("abc") catch -1
+    assert(n == 8, "struct-error function value")
+    let code = 0
+    let text = open_file("") catch e {
+        code = e.code
+        e.message
+    }
+    assert(code == 2 && text == "no name", "struct error fields")
+
+    ## 5. void results as statements
+    let seen: int[] = []
+    check_all([1, 2, 3], seen) catch e { assert(false, "should not fail") }
+    assert(#seen == 3, "void ok runs every step")
+    let failed = ""
+    check_all([1, -5, 9], seen) catch e { failed = e }
+    assert(failed == "negative: -5" && #seen == 4, "void error stops at the first failure")
+
+    ## 6. results can be stored and handled later
+    let pending = parse_digit("9")
+    assert((pending catch 0) == 9, "stored result")
+
+    ## 7. catch on a plain call traps runtime errors (panics)
+    let z = 0
+    let q = 10 / z catch -3
+    assert(q == -3, "catch traps division by zero")
+    let pm = ""
+    let pr = panic_at(1) catch e { pm = e; 5 }
+    assert(pr == 5 && "boom" in pm, "panic message is bound")
+
+    ## 8. a 1M-iteration loop through results stays cheap
+    let total = 0
+    for i in 1000000 {
+        total += parse_digit("5") catch 0
+    }
+    assert(total == 5000000, "hot loop over results")
+
+    ## 9. methods and closures return results too
+    let acct: Acct
+    acct.bal = 10
+    assert((acct:take(3) catch -1) == 7, "method ok")
+    let why = ""
+    assert((acct:take(30) catch e { why = e; -2 }) == -2 && why == "insufficient", "method error")
+    let inv = func(x: int): int ! string {
+        if x == 0 { throw "zero" }
+        return 100 / x
+    }
+    let g: (x: int): int ! string = inv
+    assert((inv(4) catch 0) == 25 && (g(0) catch e { #e }) == 4, "closure results")
+
+    print("Test 18 (Errors: T ! E, ?, catch): PASS")
+}
+

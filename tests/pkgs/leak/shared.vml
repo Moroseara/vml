@@ -1,0 +1,3 @@
+module leak.shared
+pub import leak.inner
+pub func value(): int { return inner.secret() + 1 }

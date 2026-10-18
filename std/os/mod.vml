@@ -1,0 +1,18 @@
+module std.os
+
+##[ std.os — platform information, program arguments, exit.
+    `for a in os.args() { ... }`, `os.exit(2)`. ]
+
+@[intrinsic("os_platform")] pub func platform(): string
+@[intrinsic("os_arch")]     pub func arch(): string
+@[intrinsic("unix_time")]   pub func time(): int
+@[intrinsic("clock_ns")]    pub func clock_ns(): int
+
+## Arguments given to the program (`vml app.vml a b` -> ["a", "b"]; the script path is not included)
+@[intrinsic("os_args")]     pub func args(): string[]
+## Stops the program now with this exit code (`catch` does not stop it)
+@[intrinsic("os_exit")]     pub func exit(code: int)
+
+pub func clock(): f64 {
+    return (clock_ns() as f64) / 1000000000.0
+}

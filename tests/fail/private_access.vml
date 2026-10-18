@@ -1,0 +1,3 @@
+## expect: is private to module my.util
+import my.util
+func main() { print(util.helper()) }

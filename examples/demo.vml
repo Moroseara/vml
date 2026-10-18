@@ -1,0 +1,255 @@
+##[
+  ===================================================================
+  Complete Language Showcase on Domain-Modular VM Kernel:
+    1. Pure-C Registered Standard Library (`std.math`, `std.io`, `std.string`, `std.bit`, `std.random`, `std.coroutine`)
+    2. Private by Default + `pub` Keyword (Fields & Methods)
+    3. Struct Field Default Values (`pub name: string = "Hello"`)
+    4. Default Function/Method Parameters (`func scale(v: float, f: float = 2.0)`)
+    5. Duplicate Overload Collision Check + Generic Struct Arity Overloading (`Box<T>` vs `Box<T, U>`)
+    6. Unified `String` & Primitive String Methods (`"Hi {}":format(x)`, `:trim()`, `:find()`, `:replace()`, `#str`)
+    7. Complete Lua/Luau Metamethods (`#`, `[]`, `[]=`, `()`, `in`, `as`, `is`, `iter`)
+    8. Raw String `""[ ... ]` + `+` String Concatenation, Rust-Style Tagged Union `enum`, `or` Error Handling
+  ===================================================================
+]
+
+import std.math
+import std.math as m
+import std.math {sin as s, cos as r, PI as pi} as t
+import std.random as rng
+
+import std.io
+import std.coroutine as coro
+import std.string
+import std.bit
+
+## Generic Struct Arity Overloading: `Box<T>` (1 param) and `Box<T, U>` (2 params) coexist!
+struct Box<T> {
+    pub item: T
+}
+
+struct Box<T, U> {
+    pub first: T
+    pub second: U
+}
+
+## Rust-style Tagged Union Enum with Typed Payloads!
+export enum Data {
+    Empty,
+    Default(float),
+    Code(i32)
+}
+
+func safe_div(a: float, b: float): (bool, float) {
+    if b == 0.0 {
+        return false, 0.0
+    }
+    return true, a / b
+}
+
+##[ Scales a float value by factor (defaults to 2.0) ]
+func scale(val: float, factor: float = 2.0): float {
+    return val * factor
+}
+
+## 1. `type` Contract / Interface & Reference for `struct`
+type TestType {
+    label: string,
+    get: (a: Self): float
+    read: (self: Test): float
+}
+
+struct AnotherTest {
+    ## Private by default (no `pub`!) — accessible inside AnotherTest & child struct Test
+    base_val: float = 5.0
+
+    pub func epic(a: Self): float {
+        return a.base_val * 10.0
+    }
+}
+
+struct BonusMixin {
+    pub mixin_tag: i32 = 777
+
+    pub func get_tag(a: Self): i32 {
+        return a.mixin_tag
+    }
+}
+
+## `struct Test` inherits multiple parent structs (`AnotherTest`, `BonusMixin`) AND implements `TestType`!
+struct Test: AnotherTest, BonusMixin, TestType {
+    pub label: string = "DefaultTest"
+    pub extra: float = 2.5
+
+    ## Private helper method (no `pub`!) — only callable inside `Test`!
+    @[inline]
+    func internal_bonus(x: float): float {
+        return x + 1.0
+    }
+
+    ## Public constructor with Default Parameter Values!
+    pub func new(b: float = 10.0, e: float = 5.0): Self {
+        let v: Self
+        v.base_val = b
+        v.extra = e
+        return v
+    }
+
+    pub func read(a: Self): float {
+        return a.base_val + Self.internal_bonus(a.extra)
+    }
+
+    pub func get(a: Test): float {
+        return a.extra
+    }
+
+    operator + (a: Self, b: Self): Self {
+        return Self.new(a.base_val + b.base_val, a.extra + b.extra)
+    }
+
+    ## Lua `#obj` length operator (`operator #`)
+    operator # (a: Self): i32 {
+        return #a.label
+    }
+
+    ## Lua `__call` metamethod (`def_some(2.0)`)
+    operator () (a: Self, mult: float): float {
+        return a:read() * mult
+    }
+
+    ## Lua `__index` equivalent: `def_some["extra"]` or `def_some["base"]`
+    operator [] (a: Self, key: string): float {
+        if key == "extra" {
+            return a.extra
+        }
+        if key == "legacy" {
+            ## `level = 2` reports the warning at the CALLER'S file & line (`def_some["legacy"]`)!
+            warn(f"Key '{key}' is deprecated, please use 'extra' instead", 2)
+            return a.extra
+        }
+        return a.base_val
+    }
+
+    ## Lua `__newindex` equivalent: `def_some["extra"] = 42.0`
+    operator []= (a: Self, key: string, val: float): Self {
+        if val < 0.0 {
+            error(f"Cannot assign negative value ({val}) to key '{key}'", 2)
+        }
+        if key == "extra" {
+            a.extra = val
+        } else {
+            a.base_val = val
+        }
+        return a
+    }
+
+    ## Lua `__tostring` equivalent using Format String `f"..."`!
+    operator string (a: Self): string {
+        return f"Test(label={a.label}, extra={a.extra}, tag={a.mixin_tag})"
+    }
+}
+
+## Function accepting `TestType` contract as a reference parameter!
+func inspect_contract(item: TestType): float {
+    return item:get() + item:read()
+}
+
+## Host Embed Callback with `@[host_export]` attribute
+@[inline, host_export("on_host_tick")]
+func tick_handler(fps: i32): i32 {
+    return fps * 2
+}
+
+func main() {
+    io.println("=== 1. Raw String ''[...] & Format String f'' / '':format(...) ===")
+    let raw_str = ""[
+hello world this is raw string just demo [nested bracket ok] "quotes ok" {not_interpolated}
+]
+    io.println(raw_str)
+    let hero = "Antigravity"
+    let lv: int = 99
+    io.println(f"Interpolated: Hero={hero}, NextLv={lv + 1}, Escaped={{braces}}, Triple={{{hero}}}")
+    io.println("Direct :format(): Hero={}, Level={}":format(hero, lv))
+    let sample: string = "antigravity vm"
+    io.println(f"Primitive String Methods: upper='{sample:upper()}', sub='{sample:sub(0, 4)}', #len={#sample}")
+
+    io.println("=== 2. Multiple Inheritance, `pub`, Struct Field Defaults & Default Params ===")
+    let auto_test: Test
+    io.println(auto_test.label)
+    io.println(auto_test.extra)
+    io.println(auto_test:get_tag()) ## Inherited from second parent `BonusMixin`!
+    io.println(auto_test:read())
+
+    ## Calling `Test.new()` with 0 args uses default params (b = 10.0, e = 5.0)!
+    let def_some = Test.new()
+    let other = Test.new(20.0, 3.0)
+    io.println(def_some:read())
+    io.println(scale(7.5))
+    io.println(scale(7.5, 4.0))
+
+    let combined = def_some + other
+    io.println(combined:read())
+
+    io.println("=== 3. `type` Contract, Metamethods (`#`, `()`, `[]`, `[]=`, `string`) & Stack-Level `warn`/`assert` ===")
+    io.println(def_some is TestType)
+    io.println(def_some is BonusMixin)
+    io.println(inspect_contract(def_some))
+    io.println(#def_some)       ## Invokes `operator #`!
+    io.println(def_some(2.0))   ## Invokes `operator ()`!
+    io.println(def_some["extra"])
+    def_some["extra"] = 42.5
+    io.println(def_some["legacy"]) ## Triggers `warn(..., 2)` pointing to THIS exact line in demo.vml!
+    assert(def_some["extra"] == 42.5, "extra must be 42.5")
+    io.println(def_some) ## Automatically invokes `operator string`!
+
+    io.println("=== 4. Nested `func` Inside `func` + Outer Variable Capture ===")
+    let outer_multiplier: float = 3.0
+    func compute_bonus(v: float = 10.0): float {
+        return v * outer_multiplier
+    }
+    let anon_fn = func(x: int): int {
+        return x + 50
+    }
+    io.println(compute_bonus())
+    io.println(compute_bonus(20.0))
+    io.println(anon_fn(25))
+
+    io.println("=== 5. `as` Type Casting & `is` Type Checking ===")
+    let f_val: float = "12.5" as float
+    let i_val: int = "42" as int
+    let s_val: string = 2026 as string
+    io.println(f_val + 0.5)
+    io.println(i_val + 8)
+    io.println("Year: " + s_val)
+    io.println(f_val is float)
+    io.println(def_some is AnotherTest)
+
+    io.println("=== 6. `continue` & `break` in Loops ===")
+    let even_sum: i32 = 0
+    for i in 0..20 {
+        if i == 10 {
+            break
+        }
+        if (i % 2) != 0 {
+            continue
+        }
+        even_sum += i
+    }
+    io.println(even_sum) ## 0 + 2 + 4 + 6 + 8 = 20
+
+    io.println("=== 7. Rust-Style Tagged Union Enum & Zero-Overhead `or` ===")
+    let packet = Data.Default(9.5)
+    match packet {
+        Data.Default(val) => { io.println(val * 2.0) }
+        Data.Code(err_code) => { io.println(err_code) }
+        Data.Empty => { io.println("Empty") }
+    }
+    let div_fallback: float = safe_div(20.0, 0.0) or 99.5
+    io.println(div_fallback)
+
+    io.println("=== 8. Speed Benchmark: 100,000,000 Loop Iterations ===")
+    let total: i32 = 0
+    for i in 100_000_000 {
+        total += 1
+    }
+    io.println(total)
+}

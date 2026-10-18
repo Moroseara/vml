@@ -1,0 +1,220 @@
+module std.json
+
+##[ std.json — parse and write JSON.
+
+    let doc = json.parse(text)?                 // JsonDoc ! string
+    let name = doc:get_str(doc:root(), "name") ?? "?"
+    let port = doc:find("server.port")         // node id by path, or none
+
+    let w = JsonWriter.new()
+    w:begin_object()
+    w:key("ok") w:bool(true)
+    w:end_object()
+    w:to_string()                              // {"ok":true}
+
+  A document is a flat table of nodes (one entry per value), so parsing allocates a handful of
+  arrays instead of one object per value. Nodes are numbered from 0 (the root). ]
+
+pub const NULL: i32 = 0
+pub const BOOL: i32 = 1
+pub const NUMBER: i32 = 2
+pub const STRING: i32 = 3
+pub const ARRAY: i32 = 4
+pub const OBJECT: i32 = 5
+
+## Per node: links[5 * id + 0..4] = kind, first child, next sibling, child count, last child
+pub struct JsonDoc {
+    pub links: i32[]
+    pub nums: f64[]
+    pub strs: string[]
+    pub keys: string[]
+}
+
+const KIND: i32 = 0
+const FIRST: i32 = 1
+const NEXT: i32 = 2
+const COUNT: i32 = 3
+const LAST: i32 = 4
+## Kept below the VM call-stack limit so deep input is an error, not a stack overflow
+const MAX_DEPTH: i32 = 128
+
+
+## Parser and writer live in internal files of this module (they see its private helpers)
+import "./parse"
+
+pub func parse(text: string): JsonDoc ! string {
+    let d = new_doc()
+    let end = parse_value(d, text, 0, -1, "", 0)?
+    if skip_ws(text, end) != text:len() { throw f"unexpected text after JSON at {end}" }
+    return d
+}
+
+## A JSON string literal for `s` (with quotes and escapes)
+pub func quote(s: string): string {
+    let parts: string[] = ["\""]
+    let n = s:len()
+    let run: i32 = 0
+    for i in 0..n {
+        let c = s:byte(i)
+        let esc = ""
+        if c == 34 { esc = "\\\"" }
+        else if c == 92 { esc = "\\\\" }
+        else if c == 10 { esc = "\\n" }
+        else if c == 13 { esc = "\\r" }
+        else if c == 9 { esc = "\\t" }
+        else if c < 32 { esc = "\\u00" + "0123456789abcdef":sub(c >> 4, 1) + "0123456789abcdef":sub(c & 15, 1) }
+        if esc != "" {
+            parts:push(s:sub(run, i - run))
+            parts:push(esc)
+            run = i + 1
+        }
+    }
+    parts:push(s:sub(run, n - run))
+    parts:push("\"")
+    return parts:join("")
+}
+
+## Shortest text that reads back as the same number (whole numbers without ".0")
+func number_text(v: f64): string {
+    return f"{v}"
+}
+
+## ---- reading a document ----
+pub func JsonDoc.root(self: JsonDoc): i32 { return 0 }
+
+pub func JsonDoc.kind(self: JsonDoc, node: i32): i32 {
+    let links: i32[] = self.links
+    return links[node * 5 + KIND]
+}
+
+pub func JsonDoc.kind_name(self: JsonDoc, node: i32): string {
+    let names = ["null", "bool", "number", "string", "array", "object"]
+    return names[self:kind(node)]
+}
+
+pub func JsonDoc.is_null(self: JsonDoc, node: i32): bool { return self:kind(node) == NULL }
+
+## Number of elements (array) or members (object)
+pub func JsonDoc.len(self: JsonDoc, node: i32): i32 {
+    let links: i32[] = self.links
+    return links[node * 5 + COUNT]
+}
+
+pub func JsonDoc.str(self: JsonDoc, node: i32): string? {
+    if self:kind(node) != STRING { return none }
+    let strs: string[] = self.strs
+    return strs[node]
+}
+
+pub func JsonDoc.num(self: JsonDoc, node: i32): f64? {
+    if self:kind(node) != NUMBER { return none }
+    let nums: f64[] = self.nums
+    return nums[node]
+}
+
+pub func JsonDoc.int(self: JsonDoc, node: i32): int? {
+    if self:kind(node) != NUMBER { return none }
+    let nums: f64[] = self.nums
+    return nums[node] as int
+}
+
+pub func JsonDoc.bool(self: JsonDoc, node: i32): bool? {
+    if self:kind(node) != BOOL { return none }
+    let nums: f64[] = self.nums
+    return nums[node] != (0.0 as f64)
+}
+
+## Key of a member node inside its object ("" otherwise)
+pub func JsonDoc.key(self: JsonDoc, node: i32): string {
+    let keys: string[] = self.keys
+    return keys[node]
+}
+
+## First child, or -1
+pub func JsonDoc.first_child(self: JsonDoc, node: i32): i32 {
+    let links: i32[] = self.links
+    return links[node * 5 + FIRST]
+}
+
+## Next sibling, or -1
+pub func JsonDoc.next_sibling(self: JsonDoc, node: i32): i32 {
+    let links: i32[] = self.links
+    return links[node * 5 + NEXT]
+}
+
+## i-th element of an array (or member of an object)
+pub func JsonDoc.at(self: JsonDoc, node: i32, i: i32): i32? {
+    if i < 0 || i >= self:len(node) { return none }
+    let c = self:first_child(node)
+    for k in 0..i { c = self:next_sibling(c) }
+    return c
+}
+
+## Member `key` of an object
+pub func JsonDoc.get(self: JsonDoc, node: i32, key: string): i32? {
+    if self:kind(node) != OBJECT { return none }
+    let c = self:first_child(node)
+    while c >= 0 {
+        if self:key(c) == key { return c }
+        c = self:next_sibling(c)
+    }
+    return none
+}
+
+pub func JsonDoc.get_str(self: JsonDoc, node: i32, key: string): string? {
+    if let c = self:get(node, key) { return self:str(c) }
+    return none
+}
+
+pub func JsonDoc.get_num(self: JsonDoc, node: i32, key: string): f64? {
+    if let c = self:get(node, key) { return self:num(c) }
+    return none
+}
+
+pub func JsonDoc.get_int(self: JsonDoc, node: i32, key: string): int? {
+    if let c = self:get(node, key) { return self:int(c) }
+    return none
+}
+
+pub func JsonDoc.get_bool(self: JsonDoc, node: i32, key: string): bool? {
+    if let c = self:get(node, key) { return self:bool(c) }
+    return none
+}
+
+## Node at a dotted path from the root: "server.ports.0"
+pub func JsonDoc.find(self: JsonDoc, path: string): i32? {
+    let node: i32 = 0
+    if path == "" { return node }
+    for part in path:split(".") {
+        if self:kind(node) == ARRAY {
+            let idx = part:to_int() ?? -1
+            if let c = self:at(node, idx as i32) { node = c } else { return none }
+        } else {
+            if let c = self:get(node, part) { node = c } else { return none }
+        }
+    }
+    return node
+}
+
+## Writes a node (and everything under it) back to JSON text
+pub func JsonDoc.to_string(self: JsonDoc, node: i32 = 0): string {
+    let k = self:kind(node)
+    if k == NULL { return "null" }
+    if k == BOOL { return (self:bool(node) ?? false) as string }
+    if k == NUMBER { return number_text(self:num(node) ?? (0.0 as f64)) }
+    if k == STRING { return quote(self:str(node) ?? "") }
+    let parts: string[] = []
+    let c = self:first_child(node)
+    while c >= 0 {
+        if k == OBJECT {
+            parts:push(quote(self:key(c)) + ":" + self:to_string(c))
+        } else {
+            parts:push(self:to_string(c))
+        }
+        c = self:next_sibling(c)
+    }
+    if k == OBJECT { return "{" + parts:join(",") + "}" }
+    return "[" + parts:join(",") + "]"
+}
+
+import "./writer"

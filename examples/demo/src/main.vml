@@ -1,0 +1,10 @@
+import demo.stats
+import std.json
+
+func main() {
+    let r = stats.report([3, 5, 10])
+    print(r)
+    let doc = json.parse(r) catch e { panic(e); stats.empty_doc() }
+    let mean = doc:get_int(doc:root(), "mean") ?? 0
+    print(f"mean = {mean}")
+}
