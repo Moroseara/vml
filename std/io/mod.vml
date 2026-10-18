@@ -1,6 +1,6 @@
 module std.io
 
-##[ std.io — console output and line input ]
+##[ std.io — console output (stdout / stderr) and line input ]
 
 @[intrinsic("print_str")]  pub func println(v: string)
 @[intrinsic("print_i32")]  pub func println(v: i32)
@@ -9,6 +9,10 @@ module std.io
 @[intrinsic("print_f64")]  pub func println(v: f64)
 @[intrinsic("print_bool")] pub func println(v: bool)
 @[intrinsic("io_write")]   pub func write(s: string)
+
+## Standard error (messages that should not mix with the program's output)
+@[intrinsic("io_ewrite")]  pub func ewrite(s: string)
+pub func eprint(s: string) { ewrite(s + "\n") }
 
 @[intrinsic("io_read_line")] func raw_read_line(): string
 @[intrinsic("io_eof")]       func raw_eof(): bool

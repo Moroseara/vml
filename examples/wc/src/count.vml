@@ -1,0 +1,38 @@
+module wc.count
+
+pub struct Counts {
+    pub lines: int
+    pub words: int
+    pub bytes: int
+}
+
+func is_space(c: i32): bool {
+    return c == 32 || c == 9 || c == 10 || c == 13
+}
+
+## Lines, words and bytes of a text (like Unix wc)
+pub func of(text: string): Counts {
+    let out: Counts
+    out.lines = 0
+    out.words = 0
+    out.bytes = text:len() as int
+    let in_word = false
+    for i in 0..text:len() {
+        let c = text:byte(i)
+        if c == 10 { out.lines += 1 }
+        if is_space(c) {
+            in_word = false
+        } else if !in_word {
+            in_word = true
+            out.words += 1
+        }
+    }
+    return out
+}
+
+pub func row(c: Counts, name: string): string {
+    let l = c.lines as string
+    let w = c.words as string
+    let b = c.bytes as string
+    return l:pad_left(8) + w:pad_left(8) + b:pad_left(8) + " " + name
+}

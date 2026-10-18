@@ -21,8 +21,8 @@ check run_output "$out" "Hello, world!"
 out=$("$VM" run -v 2>&1);                         check run_cached "$out" "up to date (cached build)"
 out=$(cd src && "$VM" run -v 2>&1);               check run_from_subfolder "$out" "up to date (cached build)"
 out=$("$VM" test 2>&1);                           check test_cmd "$out" "1/1 test files passed"
-out=$("$VM" build 2>&1);                          check build_cmd "$out" "built dist/game.vmb"
-out=$("$VM" dist/game.vmb 2>&1);                  check build_image_runs "$out" "Hello, world!"
+out=$("$VM" build 2>&1);                          check build_cmd "$out" "built dist/game"
+out=$(./dist/game 2>&1);                          check build_program_runs "$out" "Hello, world!"
 
 # Any source change rebuilds
 sed 's/Hello, /Hi, /' src/greet.vml > src/g.tmp && mv src/g.tmp src/greet.vml
@@ -163,6 +163,20 @@ out=$("$VM" app.vml 2>&1);                        printf '%s' "$out" | grep -q "
 printf 'import std.os\nfunc main() {\n    print(os.args():join("+"))\n    os.exit(5)\n}\n' > src/main.vml
 out=$("$VM" run -- a b 2>&1); code=$?;            check args_project "$out" "a+b"
 [ $code -eq 5 ] || { echo "FAIL project/exit_code_project (got $code)"; fail=1; }
+
+# Built programs: `vml build` makes something you run directly; *.vmb only when asked
+mkdir -p "$W/exe" && cd "$W/exe"
+printf 'import std.os\nimport std.io\nfunc main() {\n    io.eprint("to stderr")\n    print("args=" + os.args():join(","))\n    os.exit(4)\n}\n' > tool.vml
+"$VM" build tool.vml >/dev/null 2>&1;            [ -x tool ] || { echo "FAIL project/exe_default_name"; fail=1; }
+out=$(./tool help run 2>/dev/null); code=$?;      check exe_args "$out" "args=help,run"
+[ $code -eq 4 ] || { echo "FAIL project/exe_exit_code (got $code)"; fail=1; }
+out=$(./tool 2>&1 >/dev/null);                    check exe_stderr "$out" "to stderr"
+mkdir -p moved && cp tool moved/renamed && out=$(cd / && "$W/exe/moved/renamed" z 2>/dev/null); check exe_moved "$out" "args=z"
+"$VM" build tool.vml -o tool.vmb >/dev/null 2>&1; out=$("$VM" tool.vmb q 2>/dev/null); check build_vmb_by_name "$out" "args=q"
+"$VM" build tool.vml -o other >/dev/null 2>&1;    out=$(./other 2>/dev/null); check exe_named "$out" "args="
+"$VM" new prog >/dev/null && cd prog
+"$VM" build >/dev/null 2>&1;                      out=$(./dist/prog 2>&1); check project_exe "$out" "Hello, world!"
+"$VM" build -o prog.vmb >/dev/null 2>&1;          out=$("$VM" prog.vmb 2>&1); check project_vmb "$out" "Hello, world!"
 
 cd / && rm -rf "$W"
 [ $fail -eq 0 ] && echo "Project tests: PASS" || { echo "Project tests: FAILED"; exit 1; }

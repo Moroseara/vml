@@ -58,7 +58,7 @@ COMPILER_SRC = compiler/lexer/lexer_char.c \
 STD_VML = $(shell find std -name '*.vml' -not -path 'std/tests/*' | sort)
 
 # The `vml` command line (SPEC 6c): one front door, one file per command group
-MAIN_SRC = src/cli/main.c src/cli/script.c src/cli/image.c src/cli/project.c
+MAIN_SRC = src/cli/main.c src/cli/script.c src/cli/image.c src/cli/project.c src/cli/exe.c
 
 OUT = vml
 

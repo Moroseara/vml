@@ -1,0 +1,23 @@
+## wc — count lines, words and bytes:  wc FILE...
+import wc.count
+import std.fs
+import std.io
+import std.os
+
+func main() {
+    let files = os.args()
+    if files:len() == 0 {
+        io.eprint("usage: wc FILE...")
+        os.exit(2)
+    }
+    let failed = false
+    for path in files {
+        let text = fs.read(path) catch e {
+            io.eprint(f"wc: {path}: {e}")
+            failed = true
+            ""
+        }
+        if !failed || text != "" { print(count.row(count.of(text), path)) }
+    }
+    if failed { os.exit(1) }
+}

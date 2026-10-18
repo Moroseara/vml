@@ -3,7 +3,7 @@
  *
  *   vml new <name>   create a project folder
  *   vml run [-v]     build if anything changed (else reuse .vml-cache), then run
- *   vml build [-o f] build into .vml-cache and copy to dist/<name>.vmb (or -o)
+ *   vml build [-o f] build into .vml-cache, then write the program dist/<name> (or -o; *.vmb = image)
  *   vml test         run every .vml file in tests/ with the project's packages mounted
  *   vml clean        remove .vml-cache
  *
@@ -909,11 +909,16 @@ int project_cmd_build(int argc, char **argv) {
     char dist[PATH_CAP];
     if (out == NULL) {
         mkdir("dist", 0755);
-        snprintf(dist, sizeof(dist), "dist/%s.vmb", pr.name);
+        snprintf(dist, sizeof(dist), "dist/%s", pr.name);
         out = dist;
     }
-    if (!copy_file(CACHE_IMAGE, out)) {
-        fprintf(stderr, "vml: cannot write %s\n", out);
+    /* A runnable program, unless the name asks for a bytecode image (*.vmb) */
+    if (ends_with(out, ".vmb")) {
+        if (!copy_file(CACHE_IMAGE, out)) {
+            fprintf(stderr, "vml: cannot write %s\n", out);
+            return 1;
+        }
+    } else if (!cli_write_executable(CACHE_IMAGE, out, argv[0])) {
         return 1;
     }
     printf("built %s%s\n", out, hit ? " (up to date)" : "");

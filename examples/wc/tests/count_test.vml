@@ -1,0 +1,7 @@
+import wc.count
+
+func main() {
+    let c = count.of("one two\nthree\n")
+    assert(c.lines == 2 && c.words == 3 && c.bytes == 14, "counts")
+    assert(count.of("").words == 0 && count.of("  a  ").words == 1, "edges")
+}

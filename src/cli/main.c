@@ -28,8 +28,9 @@ static int cmd_help(int argc, char **argv);
 static const Command COMMANDS[] = {
     {"new",       "vml new <name>",                       "create a project folder (vml.toml, src/, tests/)", project_cmd_new},
     {"run",       "vml run [-v] [-p member] [-- program args]",             "build what changed (cached in .vml-cache), then run", project_cmd_run},
-    {"build",     "vml build [-o file] [-p member]\n      vml build file.vml -o out.vmb [--lib-path dir] [--pkg name=dir]",
-                                                          "build the project to dist/<name>.vmb, or one script to an image", cmd_build},
+    {"build",     "vml build [-o file] [-p member]\n      vml build app.vml [-o file] [--lib-path dir] [--pkg name=dir]\n"
+                  "  output is a program you run directly (./dist/<name>, ./app); name it *.vmb for a bytecode image",
+                                                          "build a runnable program (project -> dist/<name>, script -> ./<name>)", cmd_build},
     {"test",      "vml test [-p member]",                 "run tests/*.vml (every member when run at a workspace root)", project_cmd_test},
     {"clean",     "vml clean",                            "remove .vml-cache", project_cmd_clean},
     {"interface", "vml interface <file.vmb | file.vml>",  "print the public declarations", cli_interface},
@@ -66,6 +67,9 @@ static int looks_like_command(const char *s) {
 }
 
 int main(int argc, char **argv) {
+    /* A program built with `vml build`: run it, every argument is the program's */
+    int embedded = cli_run_embedded(argc, argv);
+    if (embedded >= 0) return embedded;
     if (argc < 2) return cmd_help(argc, argv);
     for (int i = 0; i < NUM_COMMANDS; i++) {
         if (strcmp(argv[1], COMMANDS[i].name) == 0) return COMMANDS[i].run(argc, argv);

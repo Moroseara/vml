@@ -1,6 +1,6 @@
 # Workspace of this repository: the standard library and the examples, tested together with `vml test`.
 [workspace]
-members = ["std", "examples/demo", "examples/mathx"]
+members = ["std", "examples/demo", "examples/mathx", "examples/wc"]
 
 [workspace.deps]
 mathx = { path = "examples/mathx" }

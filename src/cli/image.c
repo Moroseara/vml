@@ -11,6 +11,7 @@
 #include "../../compiler/gen/gen.h"
 #include "../../include/vml.h"
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -28,10 +29,24 @@ int cli_build_script(int argc, char **argv) {
         else if (vm_str_eq_cstr(argv[i], vm_str_len(argv[i]), "--pkg") == VM_TRUE && i + 1 < argc) { if (num_pkgs < 8) pkgs[num_pkgs++] = argv[i + 1]; i++; }
         else in = argv[i];
     }
-    if (in == VM_NULL || out == VM_NULL) {
-        vm_sys_write_cstr("Usage: ./vml build <script.vml> -o <image.vmb> [--lib-path dir] [--pkg name=dir]\n");
+    if (in == VM_NULL) {
+        vm_sys_write_cstr("Usage: vml build <script.vml> [-o file] [--lib-path dir] [--pkg name=dir]\n");
         return 1;
     }
+    /* Default output: the script's name without .vml, as a program you run directly */
+    char default_out[512];
+    if (out == VM_NULL) {
+        const char *base = strrchr(in, '/');
+        base = base ? base + 1 : in;
+        size_t bl = strlen(base);
+        if (bl > 4 && strcmp(base + bl - 4, ".vml") == 0) bl -= 4;
+        snprintf(default_out, sizeof(default_out), "%.*s", (int)bl, base);
+        out = default_out;
+    }
+    size_t olen = strlen(out);
+    int want_image = olen > 4 && strcmp(out + olen - 4, ".vmb") == 0;
+    char image_path[600];
+    snprintf(image_path, sizeof(image_path), "%s%s", out, want_image ? "" : ".vmb.tmp");
     VML_State *L = vml_new(VM_NULL);
     if (lib_path != VM_NULL) vml_set_lib_path(L, lib_path);
     for (int k = 0; k < num_pkgs; k++) {
@@ -52,10 +67,16 @@ int cli_build_script(int argc, char **argv) {
         vml_free(L);
         return 1;
     }
-    VML_Result r = vml_save_image_file(L, out);
+    VML_Result r = vml_save_image_file(L, image_path);
     if (r != VML_OK) printf("%s\n", vml_last_error(L));
     vml_free(L);
-    return (r == VML_OK) ? 0 : 1;
+    if (r != VML_OK) return 1;
+    if (!want_image) {
+        int ok = cli_write_executable(image_path, out, argv[0]);
+        remove(image_path);
+        if (!ok) return 1;
+    }
+    return 0;
 }
 
 /* `vml interface <file.vmb | file.vml>`: prints the public declarations */

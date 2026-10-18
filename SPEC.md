@@ -290,7 +290,7 @@ mathx = { path = "libs/mathx" }
 - ✅ std คือ member แรก: `std/vml.toml` (`name = "std"`, `builtin = true` — ใช้ชื่อ `std` ได้เฉพาะแบบนี้ และไม่ถูก mount เพราะ binary ให้ std เอง)
 
 ### คำสั่ง
-- ✅ `vml new <name>` (โครง + ตัวอย่าง module + test + `.gitignore`) / `vml run [-v]` / `vml build [-o file]` (→ `dist/<name>.vmb`) / `vml test` (ทุกไฟล์ใน `tests/`) / `vml clean`
+- ✅ `vml new <name>` (โครง + ตัวอย่าง module + test + `.gitignore`) / `vml run [-v]` / `vml build [-o file]` (→ โปรแกรม `dist/<name>`) / `vml test` (ทุกไฟล์ใน `tests/`) / `vml clean`
 - ⬜ `vml add <dep>`, bundle
 - ✅ `vml build x.vml -o x.vmb` แบบเดิมยังใช้ได้ และรับ `--lib-path` / `--pkg` แล้ว
 - ✅ `vml file.vml` แบบไม่มี project ยังใช้ได้ (สคริปต์ไฟล์เดียว)
@@ -591,6 +591,8 @@ vml_module_finish(m);
 - ✅ ชื่อ module ซ้อนได้ไม่จำกัดชั้น (ข้อ 6)
 - ✅ `std.os`: `args()`, `exit(code)` (catch หยุดไม่ได้); `vml app.vml a b`, `vml app.vml -- --flag`, `vml app.vmb a b`, `vml run -- a b`; embed: `vml_set_args`, `vml_exit_requested`
 - ✅ script mode ไม่พิมพ์ banner เวลาอีกแล้ว (ใช้ `--time`)
+- ✅ `io.eprint` / `io.ewrite` → stderr
+- ✅ ตัวอย่าง CLI จริงเขียนด้วย vml: `examples/wc` (อ่านไฟล์จาก args, error ไป stderr, exit code) ผลตรงกับ `wc` ของ Unix
 - ✅ ทศนิยม → text: ค่าที่สั้นที่สุดที่อ่านกลับได้ค่าเดิม (`0.1`, `1e+20`, `3.14159`; จำนวนเต็มไม่มี `.0`) ทั้ง `print`, f-string, `as string`, JSON
 - ✅ literal ทศนิยมอ่านแบบแม่นยำ (เดิม `3.14159` → `3.1415900000000003`, `1e20` ล้น) + รองรับ `1e20`, `2.5e-3`
 - ✅ path เต็มใน error (≤ 255 ตัว), ไฟล์ต่อโปรแกรม 32 → 128
@@ -605,7 +607,9 @@ vml_module_finish(m);
 - ⬜ std: path, process, sort, format ทศนิยม, net
 
 ### แจกและใช้งาน
-- ⬜ `vml build --exe`: ไฟล์ executable เดียว = runtime + `.vmb` ต่อท้าย (แบบ `deno compile`) — ไม่ต้องติดตั้ง vml
+- ✅ `vml build` ได้โปรแกรมที่รันได้เลยเป็นค่า default (ไม่มี flag พิเศษ): project → `dist/<name>`, script → `./<name>`; ตั้งชื่อ `-o x.vmb` เมื่ออยากได้ bytecode image
+  - ไฟล์ = vml runtime + `.vmb` + trailer 16 byte (`src/cli/exe.c`); ตอนเริ่ม vml ดูท้ายไฟล์ตัวเอง ถ้ามีโปรแกรม → รันเลย argument ทั้งหมดเป็นของโปรแกรม
+  - ย้ายไฟล์ไปไหนก็รันได้ ไม่ต้องติดตั้ง vml; ⬜ runtime ที่ไม่มี compiler (ไฟล์เล็กลง ~600KB ตอนนี้), ⬜ Linux
 - ⬜ (ไกล) compile เป็น native code (AOT ผ่าน C หรือ LLVM) — ข้อ 13 ตัด AOT/JIT ออกไว้ ต้องตัดสินใจใหม่
 - ⬜ Linux (ตอนนี้ macOS เท่านั้น), Windows ภายหลัง
 - ⬜ `make install` + release binary + CI รัน `make test` ทุก push

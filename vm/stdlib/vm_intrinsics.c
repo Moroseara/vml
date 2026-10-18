@@ -486,6 +486,22 @@ static VMReg n_io_eof(VMChunk *chunk, const VMReg *args, vm_u8 argc) {
     return out;
 }
 
+extern long write(int fd, const void *buf, unsigned long count);
+
+/* Standard error: for diagnostics, so a program's output can still be piped */
+static VMReg n_io_ewrite(VMChunk *chunk, const VMReg *args, vm_u8 argc) {
+    (void)argc;
+    VMReg out = {0};
+    VMString s = chunk->strings[args[0].str_id];
+    vm_u32 done = 0;
+    while (done < s.length) {
+        long n = write(2, s.chars + done, s.length - done);
+        if (n <= 0) break;
+        done += (vm_u32)n;
+    }
+    return out;
+}
+
 static VMReg n_io_write(VMChunk *chunk, const VMReg *args, vm_u8 argc) {
     (void)argc;
     VMReg out = {0};
@@ -632,6 +648,7 @@ static const VMIntrinsic g_intrinsics[] = {
     OP1("print_f64",     1, VM_MAKE_ABC(OP_PRINT_F64, 0, 0, 0)),
     OP1("print_bool",    1, VM_MAKE_ABC(OP_PRINT_BOOL, 0, 0, 0)),
     NAT("io_write",      1, n_io_write),
+    NAT("io_ewrite",     1, n_io_ewrite),
     NAT("io_read_line",  0, n_io_read_line),
     NAT("io_eof",        0, n_io_eof),
     /* environment / platform */
