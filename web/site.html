@@ -1,0 +1,433 @@
+<title>vml Language</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="vml: a small, fast, embeddable language with errors as values, packages, and single-file programs. Try it in the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the playground is the opening band (code left, VM output right), then a narrow reading column. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #172033;
+  --muted: #5a6577;
+  --line: #d9dfe7;
+  --accent: #0b7a75;
+  --accent-ink: #ffffff;
+  --code-bg: #0f1620;
+  --code-ink: #dbe4ee;
+  --code-dim: #7e8a9a;
+  --ok: #1f7a3d;
+  --err: #b42318;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --surface: #141a22; --ink: #e2e8f0; --muted: #8d98a8; --line: #252f3b;
+    --accent: #3ec6bd; --accent-ink: #062523; --code-bg: #0a0e14; --code-ink: #d6dee8; --code-dim: #6c7889;
+    --ok: #5fd08a; --err: #ff7b6e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --surface: #141a22; --ink: #e2e8f0; --muted: #8d98a8; --line: #252f3b;
+  --accent: #3ec6bd; --accent-ink: #062523; --code-bg: #0a0e14; --code-ink: #d6dee8; --code-dim: #6c7889;
+  --ok: #5fd08a; --err: #ff7b6e; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, kbd { font-family: var(--font-mono); font-size: 0.92em; }
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---- top bar ---- */
+.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; text-decoration: none; color: var(--ink); }
+.brand b { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em; }
+.brand span { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.top nav { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.95rem; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--ink); }
+
+/* ---- hero + playground ---- */
+.hero { padding-block: 40px 28px; }
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+  max-width: 20ch;
+  text-wrap: balance;
+}
+.hero p { margin: 0; max-width: 62ch; color: var(--muted); font-size: 1.08rem; }
+
+.play {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--code-bg);
+  margin-block: 24px 8px;
+}
+.pane { min-width: 0; display: flex; flex-direction: column; }
+.pane + .pane { border-left: 1px solid #ffffff14; }
+.bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; border-bottom: 1px solid #ffffff14; background: #ffffff08;
+  color: var(--code-dim); font-size: 0.85rem; min-height: 46px;
+}
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.tab {
+  font: 500 0.82rem/1 var(--font-body);
+  background: transparent; color: var(--code-dim); border: 1px solid transparent;
+  border-radius: 6px; padding: 7px 10px; cursor: pointer;
+}
+.tab:hover { color: var(--code-ink); }
+.tab[aria-selected="true"] { color: var(--code-ink); border-color: #ffffff26; background: #ffffff0d; }
+.run {
+  font: 600 0.9rem/1 var(--font-body);
+  background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px;
+  padding: 9px 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.run:disabled { opacity: 0.55; cursor: progress; }
+.run kbd { font-size: 0.72rem; opacity: 0.75; }
+.editor {
+  flex: 1; min-height: 420px; width: 100%; resize: vertical;
+  background: transparent; color: var(--code-ink); border: 0; outline: none;
+  font: 0.9rem/1.6 var(--font-mono); padding: 14px 16px; tab-size: 4; white-space: pre;
+  overflow: auto;
+}
+.out {
+  flex: 1; min-height: 420px; margin: 0; padding: 14px 16px; overflow: auto;
+  color: var(--code-ink); font: 0.9rem/1.6 var(--font-mono); white-space: pre-wrap; word-break: break-word;
+}
+.out .e { color: var(--err); }
+.out .hint { color: var(--code-dim); }
+.status { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.status .good { color: var(--ok); }
+.status .bad { color: var(--err); }
+.note { color: var(--muted); font-size: 0.88rem; margin: 0; }
+
+/* ---- reading sections ---- */
+section.read { padding-block: 44px; border-top: 1px solid var(--line); }
+.read h2 {
+  font-family: var(--font-display); font-weight: 600; font-size: 1.7rem; letter-spacing: -0.02em;
+  margin: 0 0 6px; text-wrap: balance;
+}
+.read .lead { color: var(--muted); margin: 0 0 24px; max-width: 64ch; }
+.features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.feature { min-width: 0; }
+.feature h3 { font-size: 1.05rem; margin: 0 0 4px; }
+.feature p { margin: 0 0 10px; color: var(--muted); max-width: 60ch; }
+pre.snip {
+  margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: 8px;
+  padding: 12px 14px; overflow-x: auto; font-size: 0.84rem; line-height: 1.55;
+}
+pre.snip .c { color: var(--code-dim); }
+
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; counter-reset: step; }
+.step { min-width: 0; }
+.step h3 { font-size: 1rem; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.step h3::before {
+  counter-increment: step; content: counter(step);
+  font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent);
+  border: 1px solid var(--line); border-radius: 50%; width: 1.6em; height: 1.6em;
+  display: inline-grid; place-items: center; flex: none;
+}
+
+.status-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 32px; padding: 0; margin: 0; list-style: none; }
+.status-list li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+.pill {
+  font: 600 0.7rem/1 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 7px; border-radius: 999px; flex: none; border: 1px solid currentColor;
+}
+.pill.done { color: var(--ok); }
+.pill.next { color: var(--muted); }
+
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+footer .wrap { padding-block: 24px 36px; display: flex; gap: 16px; justify-content: space-between; flex-wrap: wrap; }
+
+@media (max-width: 860px) {
+  .play { grid-template-columns: minmax(0, 1fr); }
+  .pane + .pane { border-left: 0; border-top: 1px solid #ffffff14; }
+  .editor { min-height: 300px; }
+  .out { min-height: 160px; }
+  .features, .steps, .status-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .run:not(:disabled):hover { filter: brightness(1.08); }
+}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" id="top"><b>vml</b><span id="ver">v0.1</span></a>
+    <nav aria-label="Sections">
+      <a href="#play">Playground</a>
+      <a href="#tour">Language</a>
+      <a href="#start">Get started</a>
+      <a href="#status">Status</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero" id="play">
+    <h1>A small language that runs anywhere you put it</h1>
+    <p>vml compiles to compact bytecode and runs on a fast register VM. Errors are values, packages are folders,
+      and <code>vml build</code> turns a project into one file you can hand to anyone. The playground below is the real
+      compiler and VM, running in your browser as WebAssembly.</p>
+
+    <div class="play">
+      <div class="pane">
+        <div class="bar">
+          <div class="tabs" role="tablist" aria-label="Examples" id="tabs"></div>
+        </div>
+        <textarea class="editor" id="code" spellcheck="false" autocapitalize="off" autocomplete="off"
+                  aria-label="vml source code"></textarea>
+      </div>
+      <div class="pane">
+        <div class="bar">
+          <button class="run" id="run" type="button" disabled>Run <kbd id="runkey">Ctrl ↵</kbd></button>
+          <span class="status" id="status">loading the VM…</span>
+        </div>
+        <pre class="out" id="out" aria-live="polite"><span class="hint">Output appears here.</span></pre>
+      </div>
+    </div>
+    <p class="note">Runs locally in this page: no files, no network, and loops stop after 50 million iterations.
+      Your edits are kept in this browser.</p>
+  </div>
+
+  <section class="read" id="tour">
+    <div class="wrap">
+      <h2>What vml is like</h2>
+      <p class="lead">A statically typed language with a light syntax. Everything here compiles with the same
+        <code>vml</code> you install.</p>
+      <div class="features">
+        <div class="feature">
+          <h3>Errors are part of the type</h3>
+          <p>A function that can fail returns <code>T ! E</code>. Callers handle it with <code>catch</code> or pass it on
+            with <code>?</code>. Forgetting to handle an error does not compile.</p>
+<pre class="snip"><code>func load(path: string): Config ! string {
+    let text = fs.read(path)?
+    return parse(text)?
+}
+let cfg = load("app.json") catch defaults()</code></pre>
+        </div>
+        <div class="feature">
+          <h3>Packages are folders</h3>
+          <p>A module is a file or a folder, named by <code>module</code> and shared with <code>pub</code>.
+            Files without a <code>module</code> line join the module that imports them.</p>
+<pre class="snip"><code><span class="c">## src/ui/mod.vml</span>
+module game.ui
+import "./widgets"        <span class="c">## internal file</span>
+pub func title(): string { return frame("menu") }</code></pre>
+        </div>
+        <div class="feature">
+          <h3>One file to ship</h3>
+          <p><code>vml build</code> writes a program you run directly. It carries the runtime with it, so the person you
+            send it to does not need vml installed.</p>
+<pre class="snip"><code>$ vml build
+built dist/wc
+$ ./dist/wc notes.txt
+      42     318    2071 notes.txt</code></pre>
+        </div>
+        <div class="feature">
+          <h3>Embeds in C hosts</h3>
+          <p>Register C functions, build types from C, run scripts with a fuel limit, and save precompiled
+            <code>.vmb</code> images. The host decides which modules a script may import.</p>
+<pre class="snip"><code>VML_Module *m = vml_module_new(L, "game");
+vml_module_func(m, "spawn", "(name: string, hp: int): Entity", host_spawn);
+vml_module_finish(m);
+vml_load_file(L, "mod.vml");</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="read" id="start">
+    <div class="wrap">
+      <h2>Get started</h2>
+      <p class="lead">vml builds from source with a C compiler. It is tested on macOS today; Linux support is next.</p>
+      <div class="steps">
+        <div class="step">
+          <h3>Build vml</h3>
+<pre class="snip"><code>git clone &lt;repo&gt; vml
+cd vml
+make -j8 &amp;&amp; make test</code></pre>
+        </div>
+        <div class="step">
+          <h3>Create a project</h3>
+<pre class="snip"><code>vml new hello
+cd hello
+vml run</code></pre>
+        </div>
+        <div class="step">
+          <h3>Test and ship</h3>
+<pre class="snip"><code>vml test
+vml build
+./dist/hello</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="read" id="status">
+    <div class="wrap">
+      <h2>Where vml is today</h2>
+      <p class="lead">vml is version 0.1 and still changing. Here is what works and what is coming before it is ready for
+        wider use.</p>
+      <ul class="status-list">
+        <li><span class="pill done">works</span><span>Modules, <code>pub</code>, <code>pub import</code>, protection against packages posing as others</span></li>
+        <li><span class="pill done">works</span><span>Projects, workspaces, path dependencies, build cache</span></li>
+        <li><span class="pill done">works</span><span>Single-file programs, program arguments, exit codes, stderr</span></li>
+        <li><span class="pill done">works</span><span>Standard library: strings, arrays, maps, math, JSON, bytes, files</span></li>
+        <li><span class="pill next">next</span><span>Larger program limits and per-module struct names</span></li>
+        <li><span class="pill next">next</span><span>Linux builds, installers and CI</span></li>
+        <li><span class="pill next">next</span><span>Coroutines and tasks that can yield</span></li>
+        <li><span class="pill next">next</span><span>Editor support (language server), formatter, docs</span></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>vml — a bytecode language and VM</span>
+    <span>The playground runs <span id="ver2">vml</span> as WebAssembly in your browser.</span>
+  </div>
+</footer>
+
+<script src="examples.js"></script>
+<script src="vml-web.js"></script>
+<script>
+(function () {
+  "use strict";
+  const EX = window.VML_EXAMPLES || [];
+  const code = document.getElementById("code");
+  const out = document.getElementById("out");
+  const runBtn = document.getElementById("run");
+  const status = document.getElementById("status");
+  const tabs = document.getElementById("tabs");
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || "");
+  document.getElementById("runkey").textContent = isMac ? "⌘ ↵" : "Ctrl ↵";
+
+  const store = {
+    get(k) { try { return localStorage.getItem("vml." + k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem("vml." + k, v); } catch (e) {} },
+  };
+
+  let current = EX[0];
+  function select(id) {
+    if (current) store.set("draft." + current.id, code.value);
+    current = EX.find((e) => e.id === id) || EX[0];
+    code.value = store.get("draft." + current.id) || current.code;
+    for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.id === current.id));
+    store.set("tab", current.id);
+  }
+  for (const ex of EX) {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.type = "button";
+    b.role = "tab";
+    b.dataset.id = ex.id;
+    b.textContent = ex.title;
+    b.addEventListener("click", () => { select(ex.id); runNow(); });
+    tabs.appendChild(b);
+  }
+  select(store.get("tab") || (location.hash.length > 1 && EX.some((e) => e.id === location.hash.slice(1)) ? location.hash.slice(1) : EX[0].id));
+
+  // Editor keys: Tab indents, Enter keeps the indent, Ctrl/Cmd+Enter runs
+  code.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runNow(); return; }
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      const s = code.selectionStart;
+      code.setRangeText("    ", s, code.selectionEnd, "end");
+    } else if (e.key === "Enter" && !e.altKey) {
+      const s = code.selectionStart;
+      const lineStart = code.value.lastIndexOf("\n", s - 1) + 1;
+      const indent = (code.value.slice(lineStart, s).match(/^ */) || [""])[0];
+      const extra = /\{\s*$/.test(code.value.slice(lineStart, s)) ? "    " : "";
+      e.preventDefault();
+      code.setRangeText("\n" + indent + extra, s, code.selectionEnd, "end");
+    }
+  });
+  code.addEventListener("input", () => store.set("draft." + current.id, code.value));
+
+  let vml = null;
+  function show(r) {
+    out.textContent = "";
+    if (r.stdout) out.append(document.createTextNode(r.stdout));
+    if (r.stderr) {
+      const s = document.createElement("span");
+      s.className = "e";
+      s.textContent = r.stderr;
+      out.append(s);
+    }
+    if (!r.stdout && !r.stderr) {
+      const s = document.createElement("span");
+      s.className = "hint";
+      s.textContent = "(no output)";
+      out.append(s);
+    }
+    const label = r.code === 0 ? ["good", "finished"]
+      : r.code === 1 ? ["bad", "compile error"]
+      : r.code === 2 ? ["bad", "runtime error"]
+      : r.code >= 100 ? [r.code === 100 ? "good" : "bad", "exit " + (r.code - 100)]
+      : ["bad", "VM error"];
+    status.innerHTML = "";
+    const tag = document.createElement("span");
+    tag.className = label[0];
+    tag.textContent = label[1];
+    status.append(tag, document.createTextNode(" · " + r.ms.toFixed(1) + " ms"));
+  }
+  function runNow() {
+    if (!vml) return;
+    runBtn.disabled = true;
+    status.textContent = "running…";
+    // let the browser paint "running…" before a long program blocks the thread
+    setTimeout(() => {
+      try { show(vml.run(code.value)); }
+      finally { runBtn.disabled = false; }
+    }, 16);
+  }
+  runBtn.addEventListener("click", runNow);
+
+  VmlWeb.load("vml.wasm").then((v) => {
+    vml = v;
+    document.getElementById("ver").textContent = "v" + v.version;
+    document.getElementById("ver2").textContent = "vml " + v.version;
+    runBtn.disabled = false;
+    status.textContent = "ready";
+    runNow();
+  }).catch((e) => {
+    status.innerHTML = "";
+    const s = document.createElement("span");
+    s.className = "bad";
+    s.textContent = "could not load the VM";
+    status.append(s);
+    out.textContent = "The WebAssembly build of vml did not load (" + e.message + "). Reload the page to try again.";
+  });
+})();
+</script>

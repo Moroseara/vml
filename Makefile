@@ -69,7 +69,7 @@ LIB_OBJ = $(patsubst %.c,build/obj/%.o,$(LIB_SRC))
 LIB_REL = build/libvml-release.a
 LIB_REL_OBJ = $(patsubst %.c,build/obj-release/%.o,$(LIB_SRC))
 
-.PHONY: all dev release clean test bench bench-baseline embed-test
+.PHONY: all dev release clean test bench bench-baseline embed-test web
 
 all: $(OUT)
 
@@ -108,6 +108,17 @@ release: build/std_sources.c $(LIB_REL)
 embed-test: $(LIB) examples/embed/host.c include/vml.h
 	$(CC) $(CFLAGS) examples/embed/host.c $(LIB) -o embed_host
 	@./embed_host
+
+# Browser playground: libvml compiled to WebAssembly (needs LLVM clang + lld + wasi-libc)
+WASM_CC ?= /opt/homebrew/opt/llvm@22/bin/clang
+WASI_SYSROOT ?= /opt/homebrew/share/wasi-sysroot
+web/vml.wasm: build/std_sources.c $(LIB_SRC) web/src/playground.c include/vml.h
+	$(WASM_CC) --target=wasm32-wasip1 --sysroot=$(WASI_SYSROOT) -O2 -std=c11 -w -mexec-model=reactor \
+		$(LIB_SRC) web/src/playground.c -o $@
+
+web: web/vml.wasm
+	@node tools/check_web_examples.js
+	@python3 tools/build_site.py
 
 bench: release
 	@bench/run.sh

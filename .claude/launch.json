@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vml-site",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/Users/moroseara/Documents/go/vm-bytecode-language/tools/serve_web.js"
+      ],
+      "port": 8737
+    }
+  ]
+}

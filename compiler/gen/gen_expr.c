@@ -1267,9 +1267,12 @@ static ExprResult gen_unary(Gen *g, AstRef n, VMDataType expected) {
 
 static ExprResult gen_cast(Gen *g, AstRef n, VMDataType expected) {
     Compiler *c = g->c;
-    ExprResult left = gen_expr(g, ND(g, n)->a, expected);
     int dst_sid = -1;
     VMDataType dst_type = gen_type(g, ND(g, n)->b, &dst_sid, VM_NULL, VM_NULL);
+    /* `0.1 as f64`: build the literal at f64 directly instead of rounding it through f32 first */
+    AstRef operand = ND(g, n)->a;
+    vm_bool float_lit_to_f64 = vm_bool_from_int(ND(g, operand)->kind == AST_FLOAT && dst_type == VM_TYPE_F64);
+    ExprResult left = gen_expr(g, operand, float_lit_to_f64 ? VM_TYPE_F64 : expected);
     if (gen_is_enum(g, left) && dst_sid < 0 && gen_is_numeric(dst_type)) {
         ExprResult tag = gen_result(VM_TYPE_I32);
         tag.reg = left.reg;

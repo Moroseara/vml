@@ -599,7 +599,9 @@ vml_module_finish(m);
 - ⬜ ยกเพดานขนาดโปรแกรม: โค้ด 65,536 คำสั่ง, ฟังก์ชัน 2,048, struct 64, const 1,024, ไฟล์ 32, module 32 → โตได้ตามต้องการ
 - ⬜ ชื่อ struct แยกตาม module (สอง package มี `Config` ได้)
 - ⬜ ลำดับ import ใน module ไม่มีผล (ตอนนี้ `import "./writer"` ต้องอยู่ท้ายไฟล์)
-- ⬜ f-string ที่มี `"` ใน `{...}`
+- ⬜ f-string ที่มี `"` ใน `{...}` และ method call บน field ใน `{...}` (`{c.lines:pad_left(7)}`)
+- ✅ `0.1 as f64` ได้ค่าตรง (literal สร้างเป็น f64 เลย ไม่ผ่าน f32) — ⬜ literal ทศนิยม default เป็น f32 ควรเป็น f64?
+- ⬜ error บอกชื่อ type ภายใน (`expected 'i64'`) แทนชื่อที่ผู้ใช้เขียน (`int`)
 
 ### ความสามารถที่ประกาศไว้แต่ยังไม่มี
 - ⬜ fiber → coroutine → task ที่ yield ได้ (ข้อ 7)
@@ -616,6 +618,9 @@ vml_module_finish(m);
 - ⬜ version ของภาษา + format `.vmb` (กฎ ABI ข้อ 10)
 
 ### เครื่องมือและเอกสาร
+- ✅ เว็บ + playground: `web/` (หน้าเดียว static) — compiler + VM ตัวเดียวกับ `vml` compile เป็น WebAssembly (`make web`: LLVM clang + lld + wasi-libc) ขนาด ~480KB; shim WASI เล็กๆ ใน `web/vml-web.js` (stdout/stderr, ไม่มี fs/network, fuel กันลูปไม่จบ); ตัวอย่างทุกตัวถูกรันตรวจโดย `tools/check_web_examples.js`
+  - ขึ้น GitHub Pages / static host ไหนก็ได้ (`web/index.html` สร้างจาก `web/site.html` ด้วย `tools/build_site.py`); ดูในเครื่อง: `node tools/serve_web.js`
+- ⬜ macro / literal ฝังภาษาอื่น (`json!{ ... }`) — หลัง 0.1
 - ⬜ `vml fmt`, `vml-analyzer` (LSP), REPL, debugger
 - ⬜ tutorial + reference + เอกสาร std (`vml doc` จาก `##`)
 
